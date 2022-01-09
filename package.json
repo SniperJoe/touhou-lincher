@@ -14,7 +14,6 @@
   "main": "background.js",
   "dependencies": {
     "core-js": "^3.6.5",
-    "nuxt3": "^3.0.0-27356801.e9128f3",
     "vue": "^3.0.0",
     "vue-class-component": "8.0.0-rc.1",
     "vue-property-decorator": "10.0.0-rc.3"
