@@ -24,3 +24,5 @@ pnpm-debug.log*
 
 # Package lock files
 yarn.lock
+#Electron-builder output
+/dist_electron
