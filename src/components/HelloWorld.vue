@@ -34,7 +34,7 @@
 import { Options, Vue } from "vue-class-component";
 import { Prop } from 'vue-property-decorator';
 
-@Options({})
+//@Options({})
 export default class HelloWorld extends Vue {
     @Prop(String) msg: string;
 }

@@ -7,11 +7,11 @@
 import HelloWorld from './components/HelloWorld.vue'
 import { Options, Vue } from 'vue-class-component';
 
-@Options({
+/*@Options({
   components: {
     HelloWorld
   }
-})
+})*/
 export default class App extends Vue {
   
 }
