@@ -1,27 +1,41 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js + TypeScript App"/>
+    <QTabs v-model="tabSelected" no-caps inline-label align="left" class="bg-white text-black shadow-2 main-menu">
+        <QTab name="games" icon="games" label="Games"></QTab>
+        <QTab name="customGames" icon="dashboard_customize" label="Custom Games"></QTab>
+        <QTab name="replays" icon="movie" label="Replays"></QTab>
+        <QTab name="settings" icon="settings" label="Settings"></QTab>
+        <QTab name="info" icon="info" label="Info"></QTab>
+    </QTabs>
+    <QTabPanels v-model="tabSelected">
+          <QTabPanel name="games">
+              <Games></Games>
+          </QTabPanel>
+          <QTabPanel name="customGames">
+              <CustomGames></CustomGames>
+          </QTabPanel>
+          <QTabPanel name="settings">
+              <GlobalSettings></GlobalSettings>
+          </QTabPanel>
+    </QTabPanels>
 </template>
 
-<script lang="ts">
-import { Options, Vue } from 'vue-class-component';
-import HelloWorld from './components/HelloWorld.vue';
+<script lang="ts" setup>
+import Games from './components/Games.vue';
+import { ActionTypes } from './store/actions';
+import GlobalSettings from './components/GlobalSettings.vue';
+import { store } from './store';
+import { ref } from 'vue';
+import CustomGames from './components/CustomGames.vue';
 
-@Options({
-  components: {
-    HelloWorld,
-  },
-})
-export default class App extends Vue {}
+const tabSelected = ref('games');
+
+store.dispatch(ActionTypes.RESTORE_APP_STATE);
 </script>
 
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+<style lang="scss">
+.main-menu {
+    position: sticky !important;
+    top: 0;
+    z-index: 3;
 }
 </style>

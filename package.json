@@ -1,6 +1,6 @@
 {
-  "name": "touhou-launcher-electron",
-  "version": "0.1.0",
+  "name": "touhou-lincher",
+  "version": "0.8.0",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -13,10 +13,13 @@
   },
   "main": "background.js",
   "dependencies": {
+    "@quasar/extras": "^1.0.0",
+    "@rushstack/eslint-patch": "^1.1.0",
+    "axios": "^0.24.0",
     "core-js": "^3.6.5",
+    "quasar": "^2.0.0",
     "vue": "^3.0.0",
-    "vue-class-component": "8.0.0-rc.1",
-    "vue-property-decorator": "10.0.0-rc.3"
+    "vuex": "^4.0.0-0"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.18.0",
@@ -24,31 +27,25 @@
     "@vue/cli-plugin-babel": "~4.5.0",
     "@vue/cli-plugin-eslint": "~4.5.0",
     "@vue/cli-plugin-typescript": "~4.5.0",
+    "@vue/cli-plugin-vuex": "~4.5.0",
     "@vue/cli-service": "~4.5.0",
     "@vue/compiler-sfc": "^3.0.0",
+    "@vue/eslint-config-standard": "^5.1.2",
     "@vue/eslint-config-typescript": "^7.0.0",
     "babel-eslint": "^10.1.0",
-    "electron": "^13.0.0",
+    "electron": "^16.0.6",
     "electron-devtools-installer": "^3.1.0",
     "eslint": "^6.7.2",
+    "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.0",
     "eslint-plugin-vue": "^7.0.0",
+    "sass": "1.32.12",
+    "sass-loader": "^10.1.0",
     "typescript": "~4.1.5",
-    "vue-cli-plugin-electron-builder": "~2.1.1"
-  },
-  "eslintConfig": {
-    "root": true,
-    "env": {
-      "node": true
-    },
-    "extends": [
-      "plugin:vue/vue3-essential",
-      "eslint:recommended",
-      "@vue/typescript"
-    ],
-    "parserOptions": {
-      "parser": "@typescript-eslint/parser"
-    },
-    "rules": {}
+    "vue-cli-plugin-electron-builder": "~2.1.1",
+    "vue-cli-plugin-quasar": "~4.0.4"
   },
   "browserslist": [
     "> 1%",
