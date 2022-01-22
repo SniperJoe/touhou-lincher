@@ -350,20 +350,26 @@ function addIpcListeners() {
             }
         },
         'search-windows-path': async (_, windowsPath: string, prefixes: string[]) => {
-            const driveLetterMatch = windowsPath.match(/^([a-z]):\//i);
+            const driveLetterMatch = windowsPath.match(/^([a-z]):[/\\]/i);
             if (driveLetterMatch) {
                 const driveLetter = driveLetterMatch[1].toLowerCase();
                 for (const prefix of prefixes) {
-                    const windowsPathParts = windowsPath.replace(driveLetterMatch[0], '').split('\\');
+                    const windowsPathParts = windowsPath.replace(driveLetterMatch[0], '').split(/[\\/]/);
+                    // console.log('parts of windows path: ' + windowsPathParts.join(', '));
                     const unixPath = path.resolve(prefix, 'dosdevices', `${driveLetter}:`, ...windowsPathParts);
+                    // console.log('unix path: ' + unixPath);
                     if (checkExists(unixPath)) {
-                        const { stdout: dosdevices_lsResult } = await TryExecAsync(`ls -l "${prefix}/${driveLetter}:"`);
+                        const { stdout: dosdevices_lsResult } = await TryExecAsync(`ls -l "${path.resolve(prefix, 'dosdevices', driveLetter + ':')}"`);
                         const drivePathMatch = dosdevices_lsResult.match(/(?<driveLetter>[a-z]): -> '?(?<drivePath>.+)'?\s*$/m);
                         if (drivePathMatch && drivePathMatch.groups) {
                             return path.resolve(drivePathMatch.groups.drivePath, ...windowsPathParts);
                         }
+                    } else {
+                        // console.log('unix path does not exist');
                     }
                 }
+            } else {
+                // console.log('drive letter regexp failed for ' + windowsPath);
             }
             return '';
         }
