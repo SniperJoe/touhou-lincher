@@ -22,6 +22,8 @@ module.exports = {
         'invokeInMain': 'readonly',
         'defineProps': 'readonly',
         'defineEmits': 'readonly',
-        'withDefaults': 'readonly'
+        'withDefaults': 'readonly',
+        'onIpcMessage': 'readonly',
+        'sendIpcMessage': 'readonly'
     },
 }

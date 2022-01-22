@@ -1,16 +1,17 @@
 'use strict'
 
-import { app, protocol, BrowserWindow } from 'electron';
+import { app, protocol, BrowserWindow, BrowserView } from 'electron';
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib';
 import installExtension, { VUEJS3_DEVTOOLS } from 'electron-devtools-installer';
 import { ipcMain, dialog, shell } from 'electron';
-import { promises as fs, existsSync } from 'fs';
+import { promises as fs, existsSync, createWriteStream } from 'fs';
 import path from 'path';
-import { CustomExeLaunchProfile, customExeLaunchProfiles, GameLaunchProfile, gameLaunchProfiles, GameSettings, LoadRemoteThcrapPatchParams, NamedPath, RunCustomGameParams, RunExeParams, RunGameParams, RunPC98GameParams, RunWindowsGameParams, ThcrapConfig, ThcrapPatchResponse, ThcrapRepository } from './data-types';
+import { CustomExeLaunchProfile, customExeLaunchProfiles, GameLaunchProfile, gameLaunchProfiles, GameName, gameNames, GameSettings, LoadRemoteThcrapPatchParams, NamedPath, RunCustomGameParams, RunExeParams, RunGameParams, RunPC98GameParams, RunWindowsGameParams, ThcrapConfig, ThcrapPatchResponse, ThcrapRepository } from './data-types';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import axios from 'axios';
 import { Channel, channels } from './background-functions';
+import { ReadStream } from 'original-fs';
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 type ReturnTypeAsync<T> = T extends (...args: any) => Promise<infer R> ? R : any;
@@ -321,10 +322,110 @@ function addIpcListeners() {
             catch {
                 // console.log(`Failed to open folder "${path.dirname(pathToOpen)}"`);
             }
+        },
+        'open-replays-repository': async (_, url: string, offsetTop: number) => {
+            await openReplaysRepository(url, offsetTop);
+        },
+        'save-replay': async (_, url: string, gamePath: string, gameName: GameName) => {
+            if (gamePath === '') {
+                await browseAndSaveReplay(url);
+            } else {
+                if (checkExists(gamePath)) {
+                    const fileName = gameName == 'mof' ? findFreeReplayFileNameForTH10(gamePath) || path.basename(url) : path.basename(url);
+                    const filePath = path.resolve(gamePath, 'replay', fileName);
+                    const clickedButton = dialog.showMessageBoxSync(mainWindow, { message: `Download ${path.basename(url)} to ${filePath}?`, buttons: ['OK', 'Cancel', 'Save as...'], type: 'question' });
+                    if (clickedButton === 0) {
+                        await downloadToFile(url, filePath);
+                    } else if (clickedButton === 2) {
+                        await browseAndSaveReplay(url);
+                    }
+                }
+            }
+        },
+        'close-replays-repository':async (_) => {
+            const mainWindowChildren = mainWindow.getBrowserViews();
+            if (mainWindowChildren.length) {
+                (mainWindowChildren[0].webContents as any as { destroy: () => void }).destroy();
+                mainWindow.setBrowserView(null);
+            }
+        },
+        'search-windows-path': async (_, windowsPath: string, prefixes: string[]) => {
+            const driveLetterMatch = windowsPath.match(/^([a-z]):\//i);
+            if (driveLetterMatch) {
+                const driveLetter = driveLetterMatch[1].toLowerCase();
+                for (const prefix of prefixes) {
+                    const windowsPathParts = windowsPath.replace(driveLetterMatch[0], '').split('\\');
+                    const unixPath = path.resolve(prefix, 'dosdevices', `${driveLetter}:`, ...windowsPathParts);
+                    if (checkExists(unixPath)) {
+                        const { stdout: dosdevices_lsResult } = await TryExecAsync(`ls -l "${prefix}/${driveLetter}:"`);
+                        const drivePathMatch = dosdevices_lsResult.match(/(?<driveLetter>[a-z]): -> '?(?<drivePath>.+)'?\s*$/m);
+                        if (drivePathMatch && drivePathMatch.groups) {
+                            return path.resolve(drivePathMatch.groups.drivePath, ...windowsPathParts);
+                        }
+                    }
+                }
+            }
+            return '';
         }
     };
     for (const channel of channels) {
         ipcMain.handle(channel, ipcListeners[channel]);
+    }
+}
+function findFreeReplayFileNameForTH10(th10Path: string): string | undefined {
+    for (let i = 1; i < 26; i++) {
+        const fileName = i >= 10 ? `th10_${i}.rpy` : `th10_0${i}.rpy`;
+        if (!checkExists(path.resolve(th10Path, 'replay', fileName))) {
+            return fileName;
+        }
+    }
+}
+async function downloadToFile(url: string, file: string) {
+    const writer = createWriteStream(file);
+    const response = await axios.get<ReadStream>(url, {
+        responseType: 'stream'
+    });
+    response.data.pipe(writer);
+    return new Promise((resolve, reject) => {
+        writer.on('finish', resolve);
+        writer.on('error', reject);
+    });
+}
+async function browseAndSaveReplay(url: string) {
+    const dialogResult = await dialog.showSaveDialog(mainWindow, {
+        properties: ['showHiddenFiles', 'showOverwriteConfirmation'],
+        filters: [ 
+            {
+                name: 'Touhou replays (*.rpy)',
+                extensions: ['rpy']
+            } 
+        ]
+    });
+    if (dialogResult.filePath) {
+        const filePath = dialogResult.filePath.endsWith('.rpy') ? dialogResult.filePath : `${dialogResult.filePath}.rpy`;
+        await downloadToFile(url, filePath);
+    }
+}
+async function openReplaysRepository(url: string, offsetTop: number) {
+    const mainWindowChildren = mainWindow.getBrowserViews();
+    if (mainWindowChildren.length) {
+        mainWindowChildren[0].webContents.loadURL(url);
+    } else {
+        const replaysView = new BrowserView();
+        mainWindow.setBrowserView(replaysView);
+        replaysView.setBounds({width: mainWindow.getBounds().width, height: mainWindow.getBounds().height - offsetTop, x: 0, y: offsetTop});
+        replaysView.setAutoResize({width: true, height: true, horizontal: true, vertical: false});
+        replaysView.webContents.loadURL(url);
+        if (!process.env.IS_TEST && process.env.WEBPACK_DEV_SERVER_URL) {
+            replaysView.webContents.openDevTools();
+        }
+        replaysView.webContents.on('will-navigate', (event, url) => {
+            if (url.endsWith('.rpy')) {
+                event.preventDefault();
+                console.log('Sending path search request to render process');
+                mainWindow.webContents.send('get-replays-path', url);
+            }
+        })
     }
 }
 async function loadLocalThcrapRepos(thcrapPath: string) : Promise<string[]> {
