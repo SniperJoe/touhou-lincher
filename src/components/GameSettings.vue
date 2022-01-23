@@ -107,9 +107,13 @@
                         <PostponedInput v-model="gameSettings.commandBefore" label="Command to execute before launch" class="q-ma-md q-mb-lg"></PostponedInput>
                         <PostponedInput v-model="gameSettings.commandAfter" label="Command to execute after launch" class="q-ma-md"></PostponedInput>
                     </QList>
+                    <div class="row">
+                        <QBtn class="fit-content q-ma-md" color="white" text-color="black" label="Open game folder" @click="openGameFolder"></QBtn>
+                        <QBtn class="fit-content q-ma-md" color="white" text-color="black" label="Edit vpatch.ini" @click="editVpatchIni"></QBtn>
+                    </div>
                 </div>
             </div>
-            <ErrorPopup v-model:visible="showThcrapError" :showCloseX="true" :error="thcrapError" :errorTitle="'Cannot run thcrap'"></ErrorPopup>
+            <ErrorPopup v-model:visible="showErrorPopup" :showCloseX="true" :error="thcrapError" :errorTitle="errorTitle"></ErrorPopup>
             <ThcrapProfileEdit :profileName="gameSettings.thcrapProfile" v-model:visible="thcrapProfileEditWindowVisible" @saved="reloadThcrap"></ThcrapProfileEdit>
             <ThcrapGameProfilesEdit v-model:visible="thcrapGameProfilesEditWindowVisible" @saved="reloadThcrap"></ThcrapGameProfilesEdit>
         </QCard>
@@ -129,6 +133,7 @@ import ThcrapGameProfilesEdit from './ThcrapGameProfilesEdit.vue';
 import { computed, ref } from 'vue';
 import { store } from '../store';
 import PostponedInput from './PostponedInput.vue';
+import { findGamePath } from '@/utils';
 
 const newThcrapProfileNameEdit = ref<QPopupEdit | null>(null);
 
@@ -146,12 +151,13 @@ const customExeLaunchProfileOptions: SelectOptions<CustomExeLaunchProfile> = [
     { value: 'thcrap', label: 'thcrap' },
     { value: 'custom', label: 'Exe' }
 ];
-const showThcrapError = ref(false);
+const showErrorPopup = ref(false);
 const thcrapError = ref('');
 const showColorPicker = ref(false);
 const thcrapProfileEditWindowVisible = ref(false);
 const newThcrapProfileName = ref('');
 const thcrapGameProfilesEditWindowVisible = ref(false);
+const errorTitle = ref('Cannot run thcrap');
 
 const gameSettings = new Proxy({} as GameSettingsType, {
     get(_, prop: keyof GameSettingsType) {
@@ -205,12 +211,14 @@ const thcrapProfiles = computed(() => {
 function checkThcrapGlobalSettings() : boolean {
     if (!store.getters.thcrapFound) {
         thcrapError.value = 'thcrap path is not properly configured';
-        showThcrapError.value = true;
+        errorTitle.value = 'Cannot run thcrap';
+        showErrorPopup.value = true;
         return false;
     }
     if (!gameSettings.thcrapProfile) {
         thcrapError.value = 'thcrap profile is not set';
-        showThcrapError.value = true;
+        errorTitle.value = 'Cannot run thcrap';
+        showErrorPopup.value = true;
         return false;
     }
     return true;
@@ -221,12 +229,14 @@ function launchThcrap(isCustomExe: boolean) {
     }
     if (!gameSettings.thcrapGameProfile && !isCustomExe) {
         thcrapError.value = 'thcrap game profile is not set';
-        showThcrapError.value = true;
+        errorTitle.value = 'Cannot run thcrap';
+        showErrorPopup.value = true;
         return;
     }
     if (!gameSettings.thcrapCustomExeProfile && isCustomExe) {
         thcrapError.value = 'thcrap custom.exe profile is not set';
-        showThcrapError.value = true;
+        errorTitle.value = 'Cannot run thcrap';
+        showErrorPopup.value = true;
         return;
     }
     emit('runGame', isCustomExe, 'thcrap');
@@ -262,7 +272,28 @@ async function onProfileCreated(profileName: string) {
 async function reloadThcrap() {
     await store.dispatch(ActionTypes.TRY_LOAD_THCRAP, store.getters.thcrapPath);
 }
-
+async function openGameFolder() {
+    const gamePath = await findGamePathOrShowError('Cannot open game folder');
+    if (gamePath) {
+        await invokeInMain('open-folder', gamePath);
+    }
+}
+async function editVpatchIni() {
+    const gamePath = await findGamePathOrShowError('Cannot find vpatch.ini');
+    if (gamePath) {
+        await invokeInMain('edit-vpatch', gamePath);
+    }
+}
+async function findGamePathOrShowError(errorToShowTitle: string) : Promise<string | undefined> {
+    const gamePath = await findGamePath(props.gameName, store);
+    if (gamePath) {
+        return gamePath;
+    } else {
+        thcrapError.value = 'No game\'s executable is configured and no correct game path found in thcrap';
+        errorTitle.value = errorToShowTitle;
+        showErrorPopup.value = true;
+    }
+}
 </script>
 
 <style lang="scss" scoped>

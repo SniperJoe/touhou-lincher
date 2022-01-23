@@ -59,7 +59,7 @@
 </template>
 
 <script lang="ts" setup>
-import { shortGameTitles } from '@/constants';
+import { shortGameTitles, categories, categoryTitles } from '@/constants';
 import { GameName, SelectOptions, SupportedLang } from '@/data-types';
 import { ActionTypes } from '@/store/actions';
 import AutoconfigureThcrap from './AutoconfigureThcrap.vue';
@@ -91,16 +91,6 @@ const thcrapLocationValid = computed(() => store.getters.thcrapFound);
 const thcrapRepositoryValid = computed(() => store.getters.thcrapStartingRepositoryValid);
 
 const suggestThcrapAutoconfig = ref(false);
-const categories: Record<string, GameName[]> = {
-    mainGames: ['hrtp', 'soew', 'podd', 'lls', 'ms', 'eosd', 'pcb', 'in', 'pofv', 'mof', 'sa', 'ufo', 'td', 'ddc', 'lolk', 'hsifs', 'wbawc', 'um'],
-    fightingGames: ['iamp', 'swr', 'soku', 'hm', 'ulil', 'aocf'],
-    otherGames: ['stb', 'ds', 'gfw', 'isc', 'vd']
-};
-const categoryTitles: Record<string, string> = {
-    mainGames: 'Main Games',
-    fightingGames: 'Fighting Games',
-    otherGames: 'Other Games'
-};
 const enabledRandomGames: Partial<Record<GameName, boolean>> = new Proxy({}, {
     get: (_, name) => {
         return store.getters.randomGamesIncludes(name as GameName);

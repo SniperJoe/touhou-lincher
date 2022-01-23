@@ -98,3 +98,13 @@ export const defaultThcrapProfileData: ThcrapProfileData = {
     dat_dump: false,
     patches: []
 };
+export const categories: Record<'mainGames' | 'fightingGames' | 'otherGames', GameName[]> = {
+    mainGames: ['hrtp', 'soew', 'podd', 'lls', 'ms', 'eosd', 'pcb', 'in', 'pofv', 'mof', 'sa', 'ufo', 'td', 'ddc', 'lolk', 'hsifs', 'wbawc', 'um'],
+    fightingGames: ['iamp', 'swr', 'soku', 'hm', 'ulil', 'aocf'],
+    otherGames: ['stb', 'ds', 'gfw', 'isc', 'vd']
+};
+export const categoryTitles: Record<string, string> = {
+    mainGames: 'Main Games',
+    fightingGames: 'Fighting Games',
+    otherGames: 'Other Games'
+};

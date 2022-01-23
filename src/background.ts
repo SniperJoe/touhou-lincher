@@ -1,17 +1,19 @@
 'use strict'
 
-import { app, protocol, BrowserWindow, BrowserView } from 'electron';
+import { app, protocol, BrowserWindow, BrowserView, Tray, Menu, MenuItem, nativeImage } from 'electron';
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib';
 import installExtension, { VUEJS3_DEVTOOLS } from 'electron-devtools-installer';
 import { ipcMain, dialog, shell } from 'electron';
 import { promises as fs, existsSync, createWriteStream } from 'fs';
 import path from 'path';
-import { CustomExeLaunchProfile, customExeLaunchProfiles, GameLaunchProfile, gameLaunchProfiles, GameName, gameNames, GameSettings, LoadRemoteThcrapPatchParams, NamedPath, RunCustomGameParams, RunExeParams, RunGameParams, RunPC98GameParams, RunWindowsGameParams, ThcrapConfig, ThcrapPatchResponse, ThcrapRepository } from './data-types';
+import { categoryNames, CustomExeLaunchProfile, customExeLaunchProfiles, CustomGameCategory, GameLaunchProfile, gameLaunchProfiles, GameName, gameNames, GameSettings, LoadRemoteThcrapPatchParams, NamedPath, RunCustomGameParams, RunExeParams, RunGameParams, RunPC98GameParams, RunWindowsGameParams, ThcrapConfig, ThcrapPatchResponse, ThcrapRepository } from './data-types';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import axios from 'axios';
 import { Channel, channels } from './background-functions';
 import { ReadStream } from 'original-fs';
+import { categories, categoryTitles, gameTitles, thcrapGameNames } from './constants';
+import { RendererChannel } from './renderer-functions';
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 type ReturnTypeAsync<T> = T extends (...args: any) => Promise<infer R> ? R : any;
@@ -22,7 +24,11 @@ protocol.registerSchemesAsPrivileged([
     { scheme: 'app', privileges: { secure: true, standard: true } }
 ])
 let mainWindow: BrowserWindow;
+let appIcon: Tray;
 
+function sendToRenderer(channel: RendererChannel, ...args: any) {
+    mainWindow.webContents.send(channel, ...args);
+}
 async function TryReadFile(file: string) : Promise<string | null> {
     try {
         return await fs.readFile(file, { encoding: 'utf-8' });
@@ -143,7 +149,7 @@ function addIpcListeners() {
                 await TryExecAsync(cmd);
             }
             console.log(command);
-            // await TryExecAsync(command);
+            await TryExecAsync(command);
             for (const cmd of params.commandsAfter.filter(c => !!c)) {
                 await TryExecAsync(cmd);
             }
@@ -306,14 +312,8 @@ function addIpcListeners() {
                 await fs.writeFile(path.resolve(configsPath, 'games.js'), profiles, { encoding: 'utf-8' });
             }
         },
-        'load-img-from-exe': async (_, path: string) => {
-            const output = await TryExecAsync(`wrestool -x -t 14 "${path}" | base64`);
-            // console.log('exe img path: ' + path);
-            // console.log('exe img result: ', output);
-            if (output.stdout) {
-                return `data:image/x-icon;base64,${output.stdout}`;
-            }
-            return '';
+        'load-img-from-exe': async (_, exePath: string) => {
+            return await loadDataUrlImgFromExe(exePath);
         },
         'open-folder': async (_, pathToOpen: string) => {
             try {
@@ -353,9 +353,9 @@ function addIpcListeners() {
             const driveLetterMatch = windowsPath.match(/^([a-z]):[/\\]/i);
             if (driveLetterMatch) {
                 const driveLetter = driveLetterMatch[1].toLowerCase();
+                const windowsPathParts = windowsPath.replace(driveLetterMatch[0], '').split(/[\\/]/);
+                // console.log('parts of windows path: ' + windowsPathParts.join(', '));
                 for (const prefix of prefixes) {
-                    const windowsPathParts = windowsPath.replace(driveLetterMatch[0], '').split(/[\\/]/);
-                    // console.log('parts of windows path: ' + windowsPathParts.join(', '));
                     const unixPath = path.resolve(prefix, 'dosdevices', `${driveLetter}:`, ...windowsPathParts);
                     // console.log('unix path: ' + unixPath);
                     if (checkExists(unixPath)) {
@@ -372,11 +372,37 @@ function addIpcListeners() {
                 // console.log('drive letter regexp failed for ' + windowsPath);
             }
             return '';
-        }
+        },
+        'edit-vpatch':async (_, gamePath: string) => {
+            const vpatchIniPAth = path.resolve(path.dirname(gamePath), 'vpatch.ini');
+            // console.log('vpatch.ini path: ' + vpatchIniPAth);
+            await TryExecAsync(`xdg-open "${vpatchIniPAth}"`);
+        },
+        'set-tray-menu':async (_, games: GameName[], customGames: string) => {
+            await createTray(games, JSON.parse(customGames));
+        },
+        'hide-tray-icon': async (_) => {
+            hideTray();
+        },
+        'hide-from-taskbar': async (_) => {
+            mainWindow.setSkipTaskbar(true);
+        },
+        'show-in-taskbar': async (_) => {
+            mainWindow.setSkipTaskbar(false);
+        },
     };
     for (const channel of channels) {
         ipcMain.handle(channel, ipcListeners[channel]);
     }
+}
+async function loadDataUrlImgFromExe(exePath: string) {
+    const output = await TryExecAsync(`wrestool -x -t 14 "${exePath}" | base64`);
+    // console.log('exe img path: ' + path);
+    // console.log('exe img result: ', output);
+    if (output.stdout) {
+        return `data:image/x-icon;base64,${output.stdout}`;
+    }
+    return '';
 }
 function findFreeReplayFileNameForTH10(th10Path: string): string | undefined {
     for (let i = 1; i < 26; i++) {
@@ -429,7 +455,7 @@ async function openReplaysRepository(url: string, offsetTop: number) {
             if (url.endsWith('.rpy')) {
                 event.preventDefault();
                 console.log('Sending path search request to render process');
-                mainWindow.webContents.send('get-replays-path', url);
+                sendToRenderer('get-replays-path', url);
             }
         })
     }
@@ -520,7 +546,7 @@ async function RunGame(runGameParams: RunWindowsGameParams) {
         for (const cmd of runGameParams.commandsBefore.filter(c => !!c)) {
             await TryExecAsync(cmd);
         }
-        // await TryExecAsync(command);
+        await TryExecAsync(command);
         for (const cmd of runGameParams.commandsAfter.filter(c => !!c)) {
             await TryExecAsync(cmd);
         }
@@ -669,6 +695,100 @@ async function getDefaultWinePrefix() : Promise<string> {
     }
     return '';
 }
+function buildGamesSubMenu(menuTemplate: (Electron.MenuItem | Electron.MenuItemConstructorOptions)[], games: GameName[], categoryName: keyof typeof categories) {
+    const categoryGames = games.filter(gn => categories[categoryName].includes(gn));
+    if (categoryGames.length) {
+        menuTemplate.push({
+            label: categoryTitles[categoryName],
+            type: 'submenu', 
+            submenu: categoryGames.map(mg => ({
+                label: gameTitles[mg], 
+                type: 'normal',
+                click: () => sendToRenderer('run-game', mg),
+                icon: assureExists(`public/tray-imgs/Icon_${thcrapGameNames[mg]}.png`)
+            }))
+        });
+    }
+}
+function assureExists(filePath: string): string | undefined {
+    return checkExists(filePath) ? filePath : undefined;
+}
+async function TryCreateNativeImageFromExe(exePath: string): Promise<Electron.NativeImage | undefined> {
+    const dataUrl = await loadDataUrlImgFromExe(exePath);
+    return dataUrl ? nativeImage.createFromDataURL(dataUrl) : undefined;
+}
+function filterNullMenuItems(items: (Electron.MenuItem | Electron.MenuItemConstructorOptions | null)[]) : (Electron.MenuItem | Electron.MenuItemConstructorOptions)[] {
+    return items.filter(i => i !== null) as (Electron.MenuItem | Electron.MenuItemConstructorOptions)[];
+}
+async function buildCustomGamesMenuItem(customGamesCategory: CustomGameCategory): Promise<Electron.MenuItem | Electron.MenuItemConstructorOptions | null> {
+    const gameImages = await Promise.all(customGamesCategory.games.map(g => TryCreateNativeImageFromExe(g.path)));
+
+    const children = filterNullMenuItems(await Promise.all(customGamesCategory.children.map(c => buildCustomGamesMenuItem(c))))
+        .concat(customGamesCategory.games.map((g, i) => ({ 
+            label: g.name, 
+            type: 'normal',
+            click: () => sendToRenderer('run-custom-game', g),
+            icon: gameImages[i]
+        })));
+
+    return children.length ? {
+        label: customGamesCategory.name,
+        type: 'submenu',
+        submenu: children
+    } as (Electron.MenuItem | Electron.MenuItemConstructorOptions) : null;
+}
+async function createTray(games: GameName[], customGames: CustomGameCategory) {
+    try {
+        if (!appIcon || appIcon.isDestroyed()) {
+            appIcon = new Tray('public/favicon-2.png');
+            appIcon.on('double-click', restoreMainWindow);
+        }
+        const menuTemplate: (Electron.MenuItem | Electron.MenuItemConstructorOptions)[] = [];
+        for (const categoryName of categoryNames) {
+            buildGamesSubMenu(menuTemplate, games, categoryName);
+        }
+        const customGamesSubmenu = await buildCustomGamesMenuItem(customGames);
+        if (customGamesSubmenu) {
+            customGamesSubmenu.label = 'Custom Games';
+            menuTemplate.push(customGamesSubmenu);
+        }
+        const persistentItems: (Electron.MenuItem | Electron.MenuItemConstructorOptions)[] = [
+            {
+                label: 'Random',
+                type: 'normal',
+                click: () => sendToRenderer('run-random-game')
+            },
+            {
+                type: 'separator'
+            },
+            {
+                label: 'Open',
+                type: 'normal',
+                click: restoreMainWindow
+            },
+            {
+                label: 'Exit',
+                type: 'normal',
+                click: () => mainWindow.close()
+            }
+        ];
+        menuTemplate.push(...persistentItems);
+        const contextMenu = Menu.buildFromTemplate(menuTemplate);
+        appIcon.setContextMenu(contextMenu);
+
+    } catch (e) {
+        console.log(e);
+    }
+}
+function hideTray() {
+    if (appIcon && !appIcon.isDestroyed()) {
+        appIcon.destroy();
+    }
+}
+function restoreMainWindow() {
+    mainWindow.restore();
+    sendToRenderer('open');
+}
 async function createWindow() {
     addIpcListeners();
     // Create the browser window.
@@ -681,8 +801,14 @@ async function createWindow() {
             // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
             nodeIntegration: new Boolean(process.env.ELECTRON_NODE_INTEGRATION).valueOf(),
             contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION,
-            preload: path.join(__dirname, 'preload.js')
-        }
+            preload: path.join(__dirname, 'preload.js'),
+            
+        },
+        icon: 'public/favicon-2.png'
+    });
+    mainWindow.on('minimize', (event: Electron.Event) => {
+        // console.log('window minmized');
+        sendToRenderer('minimized');
     });
     if (process.env.WEBPACK_DEV_SERVER_URL) {
         // Load the url of the dev server if in development mode
@@ -717,7 +843,7 @@ app.on('ready', async () => {
     if (isDevelopment && !process.env.IS_TEST) {
         // Install Vue Devtools
         try {
-            await installExtension(VUEJS3_DEVTOOLS)
+            // await installExtension(VUEJS3_DEVTOOLS)
         } catch (e) {
             console.error('Vue Devtools failed to install:', (e as { toString(): string }).toString())
         }

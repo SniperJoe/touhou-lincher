@@ -26,6 +26,7 @@ export type Getters = {
     customGamesCategoryExists: (state: State) => (id: number) => boolean;
     customGamesOfCategory: (state: State) => (id: number) => CustomGame[];
     thcrapMainGamePath: (state: State) => (gameName: GameName) => string;
+    customGamesCategoryName: (state: State) => (categoryId: number) => string;
 }
 
 export const getters: GetterTree<State, State> & Getters = {
@@ -74,5 +75,10 @@ export const getters: GetterTree<State, State> & Getters = {
             return state.thcrapConfig.games[thcrapGameName] || '';
         }
         return '';
+    },
+    customGamesCategoryName: (state: State) => (categoryId: number) => {
+        let categoryName = '';
+        findCategoryAndRun(categoryId, c => { categoryName = c.name; }, state.customGames.children);
+        return categoryName;
     }
 };

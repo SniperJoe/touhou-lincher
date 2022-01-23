@@ -49,10 +49,11 @@
 import { ActionTypes } from '@/store/actions';
 import GameSettings from './GameSettings.vue';
 import { gameTitles } from '@/constants';
-import { GameLaunchProfile, GameName, RunWindowsGameParams, gameConfigurableExecutables, CustomExeLaunchProfile, customExeLaunchProfiles, RunPC98GameParams } from '@/data-types';
+import { GameLaunchProfile, GameName, CustomExeLaunchProfile } from '@/data-types';
 import ErrorPopup from './ErrorPopup.vue';
 import { computed, ref, watch } from 'vue';
 import { store } from '../store';
+import { isGameConfigured, isPC98 as getIsPC98, runGame } from '@/utils';
 
 const props = defineProps<{gameName: GameName, nameColor: number}>();
 
@@ -82,9 +83,7 @@ const showText = computed(() => {
 const title = computed(() => {
     return gameTitles[props.gameName];
 });
-const configured = computed(() => {
-    return isPC98.value ? isPC98GameConfigured() : isWindowsGameConfigured();
-});
+const configured = computed(() => isGameConfigured(props.gameName, gameSettings.value, store.getters.nekoProjectPathValid, store.getters.thcrapFound));
 
 const customExeConfigured = computed(() => {
     return isPC98.value ? false : (gameSettings.value.thcrapProfile &&
@@ -95,9 +94,7 @@ const customExeConfigured = computed(() => {
 const useCustomTextColor = computed(() => {
     return gameSettings.value.useTextColor && !!gameSettings.value.textColor;
 });
-const isPC98 = computed(() => {
-    return ['hrtp', 'soew', 'podd', 'lls', 'ms'].includes(props.gameName);
-});
+const isPC98 = computed(() => getIsPC98(props.gameName));
 
 function toggleShowBanner() {
     const settings = gameSettings.value;
@@ -117,52 +114,11 @@ function onSettingsClosed() {
     settingsOpened.value = false;
 }
 async function launchGame(isCustomExe: boolean, type?: GameLaunchProfile | CustomExeLaunchProfile) {
-    const settings = gameSettings.value;
-    if (isPC98.value) {
-        const params: RunPC98GameParams = {
-            gameSettings: settings,
-            defaultWinePrefix: store.getters.defaultNamedPath('winePrefix'),
-            defaultWineExec: store.getters.defaultNamedPath('wineExec'),
-            winePrefixes: store.getters.namedPaths('winePrefix'),
-            wineExecs: store.getters.namedPaths('wineExec'),
-            nekoProjectPath: store.getters.nekoProjectPath,
-            nekoProjectPathValid: store.getters.nekoProjectPathValid,
-            commandsBefore: [store.getters.commandBefore, settings.commandBefore],
-            commandsAfter: [store.getters.commandAfter, settings.commandAfter]
-        };
-        const error = await invokeInMain('run-pc98-game', JSON.stringify(params));
-        if (error) {
-            runGameError.value = pc98runErrors[error] || error;
-            runGameErrorVisible.value = true;
-        }
-    } else {
-        if (type) {
-            if (!isCustomExe && isGameLaunchProfile(type)) {
-                settings.defaultExecutable = type;
-            } else if (isCustomExe && isCustomExeLaunchProfile(type)) {
-                settings.defaultCustomExeExecutable = type;
-            }
-        }
-        const params: RunWindowsGameParams = {
-            gameSettings: settings,
-            defaultWinePrefix: store.getters.defaultNamedPath('winePrefix'),
-            defaultWineExec: store.getters.defaultNamedPath('wineExec'),
-            winePrefixes: store.getters.namedPaths('winePrefix'),
-            wineExecs: store.getters.namedPaths('wineExec'),
-            thcrapPath: store.getters.thcrapPath,
-            thcrapFound: store.getters.thcrapFound,
-            isCustomExe,
-            commandsBefore: [store.getters.commandBefore, settings.commandBefore],
-            commandsAfter: [store.getters.commandAfter, settings.commandAfter]
-        };
-        await invokeInMain('run-game', JSON.stringify(params));
+    const error = await runGame(props.gameName, store, isCustomExe, type);
+    if (error) {
+        runGameError.value = pc98runErrors[error] || error;
+        runGameErrorVisible.value = true;
     }
-}
-function isGameLaunchProfile(typ: GameLaunchProfile | CustomExeLaunchProfile): typ is GameLaunchProfile {
-    return typ !== 'custom';
-}
-function isCustomExeLaunchProfile(typ: GameLaunchProfile | CustomExeLaunchProfile): typ is CustomExeLaunchProfile {
-    return (Array.from(customExeLaunchProfiles) as string[]).includes(typ);
 }
 async function onCustomBannerChanged() {
     if (gameSettings.value.bannerCorrect) {
@@ -176,15 +132,6 @@ async function onCustomGreyBannerChanged() {
 }
 watch(() => gameSettings.value.banner, onCustomBannerChanged);
 watch(() => gameSettings.value.greyBanner, onCustomGreyBannerChanged);
-function isWindowsGameConfigured(): boolean {
-    return (gameSettings.value.thcrapProfile &&
-        gameSettings.value.thcrapGameProfile &&
-        store.getters.thcrapFound
-    ) || gameConfigurableExecutables.some(exec => gameSettings.value.executables[exec].path);
-}
-function isPC98GameConfigured(): boolean {
-    return store.getters.nekoProjectPathValid && !!gameSettings.value.hdiPath;
-}
 onCustomBannerChanged();
 onCustomGreyBannerChanged();
 </script>

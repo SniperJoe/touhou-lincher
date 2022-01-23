@@ -1,5 +1,5 @@
 <template>
-    <div class="row items-center custom-game" :class="viewClass[viewType]" @dblclick="run()">
+    <div class="row items-center custom-game" :class="viewClass[viewType]" @dblclick="run(false)">
         <QImg :src="img" :width="iconWidth[viewType]"></QImg>
         <span class="game-name" v-if="viewType != 'tile'">{{ game.name }}</span>
         <div class="tile-details" v-if="viewType == 'tile'">
@@ -49,7 +49,7 @@
             <QItem clickable v-close-popup @click="openFolder">
                 <QItemSection>Open folder</QItemSection>
             </QItem>
-            <QItem clickable v-close-popup @click="runWithAppLocale">
+            <QItem clickable v-close-popup @click="run(true)">
                 <QItemSection>Open with AppLocale</QItemSection>
             </QItem>
             <QItem clickable v-close-popup @click="deleteGame">
@@ -63,11 +63,12 @@
 </template>
 
 <script lang="ts" setup>
-import { CustomGame, RunCustomGameParams, CustomGamesViewType } from '@/data-types';
+import { CustomGame, CustomGamesViewType } from '@/data-types';
 import { store } from '@/store';
 import { ActionTypes } from '@/store/actions';
 import { computed, ComputedRef, nextTick, Ref, ref, watch } from 'vue';
 import { QPopupEdit, useQuasar } from 'quasar';
+import { runCustomGame } from '@/utils';
 
 const props = defineProps<{index: number; game: CustomGame; parentId: number; viewType: CustomGamesViewType}>();
 const img = ref('');
@@ -109,26 +110,12 @@ function setWine(wineId: number) {
 async function openFolder() {
     await invokeInMain('open-folder', props.game.path);
 }
-async function runWithAppLocale() {
-    await run(true);
-}
-async function run(withAppLocale?: boolean) {
-    const params: RunCustomGameParams = {
-        gameSettings: props.game,
-        defaultWinePrefix: store.getters.defaultNamedPath('winePrefix'),
-        defaultWineExec: store.getters.defaultNamedPath('wineExec'),
-        winePrefixes: store.getters.namedPaths('winePrefix'),
-        wineExecs: store.getters.namedPaths('wineExec'),
-        commandsBefore: [store.getters.commandBefore],
-        commandsAfter: [store.getters.commandAfter],
-        withAppLocale: withAppLocale || false,
-        path: props.game.path
-    };
-    await invokeInMain('run-custom-game', JSON.stringify(params));
+async function run(withAppLocale: boolean) {
+    await runCustomGame(props.game, store, withAppLocale);
 }
 function deleteGame() {
     $q.dialog({
-        message: `Are you sure you want to delete "${props.game.name}" from the list?`,
+        message: `Are you sure you want to delete "${props.game.name}" from ${store.getters.customGamesCategoryName(props.parentId)}?`,
         cancel: true,
         persistent: true
     }).onOk(() => {

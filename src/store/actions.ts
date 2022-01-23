@@ -1,9 +1,10 @@
 import { ActionContext, ActionTree } from 'vuex';
 import State from './state';
 import { TMutations, MutationTypes } from './mutations';
-import { CustomGame, GameName, GameSettings, NamedPath, NamedPathType, namedPathTypes, ThcrapConfig } from '@/data-types';
+import { CustomGame, GameName, gameNames, GameSettings, NamedPath, NamedPathType, namedPathTypes, ThcrapConfig } from '@/data-types';
 import { defaultThcrapConfig, defaultThcrapStartingRepository } from './defaults';
 import { thcrapGameNames } from '@/constants';
+import { isGameConfigured } from '@/utils';
 
 export enum ActionTypes {
     RESTORE_APP_STATE = '1',
@@ -31,7 +32,8 @@ export enum ActionTypes {
     ADD_CUSTOM_GAMES_CATEGORY = '23',
     DELETE_CUSTOM_GAMES_CATEGORY = '24',
     EDIT_CUSTOM_GAME = '25',
-    DELETE_CUSTOM_GAME = '26'
+    DELETE_CUSTOM_GAME = '26',
+    UPSERT_TRAY_CONTEXT_MENU = '27'
 }
 
 type AugmentedActionContext = {
@@ -68,6 +70,7 @@ export interface IActions {
     [ActionTypes.DELETE_CUSTOM_GAMES_CATEGORY]({ commit, dispatch }: AugmentedActionContext, payload: number): Promise<void>;
     [ActionTypes.EDIT_CUSTOM_GAME]({ commit, dispatch }: AugmentedActionContext, payload: {parentId: number, game: CustomGame; index: number}): Promise<void>;
     [ActionTypes.DELETE_CUSTOM_GAME]({ commit, dispatch }: AugmentedActionContext, payload: {parentId: number, index: number}): Promise<void>;
+    [ActionTypes.UPSERT_TRAY_CONTEXT_MENU]({ state }: AugmentedActionContext): Promise<void>;
 }
 type ActionsInterfaceCorrect = IActions extends {[K in `${ActionTypes}`]: (context: AugmentedActionContext, payload: any) => Promise<void> | void } ? true : false; // eslint-disable-line @typescript-eslint/no-explicit-any
 type Actions = ActionsInterfaceCorrect extends true ? IActions : null;
@@ -121,6 +124,9 @@ export const actions: ActionTree<State, State> & Actions = {
         if (settings.customGames) {
             commit(MutationTypes.SET_CUSTOM_GAMES, settings.customGames);
         }
+        if (settings.showTrayIcon) {
+            await dispatch(ActionTypes.UPSERT_TRAY_CONTEXT_MENU);
+        }
     },
     async [ActionTypes.SET_GAME_SETTINGS]({ commit, dispatch, state: currentState }: AugmentedActionContext, payload: GameSettings & { gameName: GameName }) {
         if (payload.banner !== currentState.gamesSettings[payload.gameName].banner) {
@@ -131,6 +137,9 @@ export const actions: ActionTree<State, State> & Actions = {
         }
         commit(MutationTypes.SET_GAME_SETTINGS, payload);
         await dispatch(ActionTypes.SAVE_SETTINGS);
+        if (currentState.showTrayIcon) {
+            await dispatch(ActionTypes.UPSERT_TRAY_CONTEXT_MENU);
+        }
     },
     async [ActionTypes.SAVE_SETTINGS]({ state }: AugmentedActionContext) {
         await invokeInMain('set-settings', JSON.stringify(state, null, '    '));
@@ -159,13 +168,21 @@ export const actions: ActionTree<State, State> & Actions = {
     },
     async [ActionTypes.SET_SHOW_TRAY_ICON]({ commit, dispatch }: AugmentedActionContext, payload: boolean) {
         commit(MutationTypes.SET_SHOW_TRAY_ICON, payload);
+        if (payload) {
+            await dispatch(ActionTypes.UPSERT_TRAY_CONTEXT_MENU);
+        } else {
+            await invokeInMain('hide-tray-icon');
+        }
         await dispatch(ActionTypes.SAVE_SETTINGS);
     },
-    async [ActionTypes.SET_NEKO_PROJECT_PATH]({ commit, dispatch }: AugmentedActionContext, payload: string) {
+    async [ActionTypes.SET_NEKO_PROJECT_PATH]({ commit, dispatch, state }: AugmentedActionContext, payload: string) {
         commit(MutationTypes.SET_NEKO_PROJECT_PATH, payload);
         const pathValid: boolean = await invokeInMain('check-neko-project-path', payload);
         commit(MutationTypes.SET_NEKO_PROJECT_PATH_VALID, pathValid);
         await dispatch(ActionTypes.SAVE_SETTINGS);
+        if (state.showTrayIcon) {
+            await dispatch(ActionTypes.UPSERT_TRAY_CONTEXT_MENU);
+        }
     },
     async [ActionTypes.SET_THCRAP_STARTING_REPOSITORY]({ commit, dispatch }: AugmentedActionContext, payload: string) {
         commit(MutationTypes.SET_THCRAP_STARTING_REPOSITORY, payload);
@@ -201,6 +218,9 @@ export const actions: ActionTree<State, State> & Actions = {
             }
         });
         await dispatch(ActionTypes.SAVE_SETTINGS);
+        if (state.showTrayIcon) {
+            await dispatch(ActionTypes.UPSERT_TRAY_CONTEXT_MENU);
+        }
     },
     async [ActionTypes.SET_NAMED_PATH_NAME]({ commit, dispatch }: AugmentedActionContext, payload: {name: string, id: number, type: NamedPathType}) {
         commit(MutationTypes.SET_NAMED_PATH_NAME, payload);
@@ -218,7 +238,7 @@ export const actions: ActionTree<State, State> & Actions = {
         commit(MutationTypes.SET_DEFAULT_NAMED_PATH, payload);
         await dispatch(ActionTypes.SAVE_SETTINGS);
     },
-    async [ActionTypes.TRY_LOAD_THCRAP]({ commit }: Pick<AugmentedActionContext, 'commit'>, payload: string) {
+    async [ActionTypes.TRY_LOAD_THCRAP]({ commit, state, dispatch }: AugmentedActionContext, payload: string) {
         commit(MutationTypes.SET_THCRAP_PATH, payload);
         const thcrapConfig: ThcrapConfig | null = await invokeInMain('get-thcrap-config', payload);
         if (thcrapConfig) {
@@ -227,6 +247,9 @@ export const actions: ActionTree<State, State> & Actions = {
         } else {
             commit(MutationTypes.SET_THCRAP_CONFIG, defaultThcrapConfig);
             commit(MutationTypes.SET_THCRAP_FOUND, false);
+        }
+        if (state.showTrayIcon) {
+            await dispatch(ActionTypes.UPSERT_TRAY_CONTEXT_MENU);
         }
     },
     async [ActionTypes.SET_COMMAND_BEFORE]({ commit, dispatch }: AugmentedActionContext, payload: string) {
@@ -237,28 +260,48 @@ export const actions: ActionTree<State, State> & Actions = {
         commit(MutationTypes.SET_COMMAND_AFTER, payload);
         await dispatch(ActionTypes.SAVE_SETTINGS);
     },
-    async [ActionTypes.SET_CUSTOM_GAMES_CATEGORY_NAME]({ commit, dispatch }: AugmentedActionContext, payload: {id: number, name: string}) {
+    async [ActionTypes.SET_CUSTOM_GAMES_CATEGORY_NAME]({ commit, dispatch, state }: AugmentedActionContext, payload: {id: number, name: string}) {
         commit(MutationTypes.SET_CUSTOM_GAMES_CATEGORY_NAME, payload);
         await dispatch(ActionTypes.SAVE_SETTINGS);
+        if (state.showTrayIcon) {
+            await dispatch(ActionTypes.UPSERT_TRAY_CONTEXT_MENU);
+        }
     },
-    async [ActionTypes.ADD_CUSTOM_GAME]({ commit, dispatch }: AugmentedActionContext, payload: {parentId: number, game: CustomGame}) {
+    async [ActionTypes.ADD_CUSTOM_GAME]({ commit, dispatch, state }: AugmentedActionContext, payload: {parentId: number, game: CustomGame}) {
         commit(MutationTypes.ADD_CUSTOM_GAME, payload);
         await dispatch(ActionTypes.SAVE_SETTINGS);
+        if (state.showTrayIcon) {
+            await dispatch(ActionTypes.UPSERT_TRAY_CONTEXT_MENU);
+        }
     },
     async [ActionTypes.ADD_CUSTOM_GAMES_CATEGORY]({ commit, dispatch }: AugmentedActionContext, payload: number | null) {
         commit(MutationTypes.ADD_CUSTOM_GAMES_CATEGORY, payload);
         await dispatch(ActionTypes.SAVE_SETTINGS);
     },
-    async [ActionTypes.DELETE_CUSTOM_GAMES_CATEGORY]({ commit, dispatch }: AugmentedActionContext, payload: number) {
+    async [ActionTypes.DELETE_CUSTOM_GAMES_CATEGORY]({ commit, dispatch, state }: AugmentedActionContext, payload: number) {
         commit(MutationTypes.DELETE_CUSTOM_GAMES_CATEGORY, payload);
         await dispatch(ActionTypes.SAVE_SETTINGS);
+        if (state.showTrayIcon) {
+            await dispatch(ActionTypes.UPSERT_TRAY_CONTEXT_MENU);
+        }
     },
-    async [ActionTypes.EDIT_CUSTOM_GAME]({ commit, dispatch }: AugmentedActionContext, payload: {parentId: number, game: CustomGame; index: number}) {
+    async [ActionTypes.EDIT_CUSTOM_GAME]({ commit, dispatch, state }: AugmentedActionContext, payload: {parentId: number, game: CustomGame; index: number}) {
         commit(MutationTypes.EDIT_CUSTOM_GAME, payload);
         await dispatch(ActionTypes.SAVE_SETTINGS);
+        if (state.showTrayIcon) {
+            await dispatch(ActionTypes.UPSERT_TRAY_CONTEXT_MENU);
+        }
     },
-    async [ActionTypes.DELETE_CUSTOM_GAME]({ commit, dispatch }: AugmentedActionContext, payload: {parentId: number, index: number}) {
+    async [ActionTypes.DELETE_CUSTOM_GAME]({ commit, dispatch, state }: AugmentedActionContext, payload: {parentId: number, index: number}) {
         commit(MutationTypes.DELETE_CUSTOM_GAME, payload);
         await dispatch(ActionTypes.SAVE_SETTINGS);
+        if (state.showTrayIcon) {
+            await dispatch(ActionTypes.UPSERT_TRAY_CONTEXT_MENU);
+        }
+    },
+    async [ActionTypes.UPSERT_TRAY_CONTEXT_MENU]({ state }: AugmentedActionContext) {
+        const configuredGames: GameName[] = gameNames.filter(gn => isGameConfigured(gn, state.gamesSettings[gn], state.nekoProjectPathValid, state.thcrapFound));
+        await invokeInMain('set-tray-menu', configuredGames, JSON.stringify(state.customGames));
+        // console.log('creating tray: ', configuredGames, state.customGames);
     }
 };

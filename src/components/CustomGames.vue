@@ -30,7 +30,7 @@
                     >
                         <template v-slot:body-cell-game="props">
                             <QTd key="name" :props="props" style="width: fit-content;">
-                                <CustomGame :index="props.row.index" :game="toGame(props.row)" :parentId="selected || 0" :view-type="viewType"></CustomGame>
+                                <CustomGame :index="props.row.index" :game="props.row" :parentId="selected || 0" :view-type="viewType"></CustomGame>
                             </QTd>
                         </template>
                 </QTable>
@@ -100,11 +100,12 @@
 <script lang="ts" setup>
 import { store } from '@/store';
 import { ActionTypes } from '@/store/actions';
-import type { LooseDictionary, QTableProps, QTree } from 'quasar';
+import type { QTableProps, QTree } from 'quasar';
 import { computed, ComputedRef, Ref, ref } from 'vue';
 import CustomGameCategoryHeader from './CustomGameCategoryHeader.vue';
 import CustomGame from './CustomGame.vue';
-import { CustomGame as CustomGameType, CustomGamesViewType, RunCustomGameParams } from '../data-types';
+import { CustomGame as CustomGameType, CustomGamesViewType } from '../data-types';
+import { runCustomGame } from '@/utils';
 
 const splitterModel = ref(50);
 const selected : Ref<number | null> = ref(null);
@@ -164,24 +165,10 @@ function getExeName(path: string) : string {
     }
     return path;
 }
-function toGame(row: LooseDictionary) : CustomGameType {
-    return row as CustomGameType;
-}
 async function runRandom() {
     const index = Math.floor(Math.random() * games.value.length);
     const game = games.value[index];
-    const params: RunCustomGameParams = {
-        gameSettings: game,
-        defaultWinePrefix: store.getters.defaultNamedPath('winePrefix'),
-        defaultWineExec: store.getters.defaultNamedPath('wineExec'),
-        winePrefixes: store.getters.namedPaths('winePrefix'),
-        wineExecs: store.getters.namedPaths('wineExec'),
-        commandsBefore: [store.getters.commandBefore],
-        commandsAfter: [store.getters.commandAfter],
-        withAppLocale: false,
-        path: game.path
-    };
-    await invokeInMain('run-custom-game', JSON.stringify(params));
+    await runCustomGame(game, store, false);
 }
 </script>
 

@@ -6,6 +6,7 @@ export const customExeLaunchProfiles = ['custom', 'thcrap'] as const;
 export const supportedLangs = ['en', 'jp', 'ru'] as const;
 export const namedPathTypes = ['wineExec', 'winePrefix'] as const;
 export const gameNames = ['hrtp', 'soew', 'podd', 'lls', 'ms', 'eosd', 'pcb', 'in', 'pofv', 'mof', 'sa', 'ufo', 'td', 'ddc', 'lolk', 'hsifs', 'wbawc', 'um', 'iamp', 'swr', 'soku', 'hm', 'ulil', 'aocf', 'stb', 'ds', 'gfw', 'isc', 'vd'] as const;
+export const categoryNames = ['mainGames', 'fightingGames', 'otherGames'] as const;
 
 export type GameConfigurableExecutable = typeof gameConfigurableExecutables[number];
 export type ConfigurableExecutable = typeof configurableExecutables[number];
@@ -15,6 +16,7 @@ export type CustomExeLaunchProfile = typeof customExeLaunchProfiles[number];
 export type SupportedLang = typeof supportedLangs[number];
 export type NamedPathType = typeof namedPathTypes[number];
 export type GameName = typeof gameNames[number];
+export type CategoryName = typeof categoryNames[number];
 
 export type ThcrapConfig = {
     profiles: string[];
