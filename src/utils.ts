@@ -64,7 +64,8 @@ export async function runGame(game: GameName, store: Store, isCustomExe: boolean
             nekoProjectPath: store.getters.nekoProjectPath,
             nekoProjectPathValid: store.getters.nekoProjectPathValid,
             commandsBefore: [store.getters.commandBefore, settings.commandBefore],
-            commandsAfter: [store.getters.commandAfter, settings.commandAfter]
+            commandsAfter: [store.getters.commandAfter, settings.commandAfter],
+            autoClose: store.getters.autoClose
         };
         return await invokeInMain('run-pc98-game', JSON.stringify(params));
     } else {
@@ -85,7 +86,8 @@ export async function runGame(game: GameName, store: Store, isCustomExe: boolean
             thcrapFound: store.getters.thcrapFound,
             isCustomExe,
             commandsBefore: [store.getters.commandBefore, settings.commandBefore],
-            commandsAfter: [store.getters.commandAfter, settings.commandAfter]
+            commandsAfter: [store.getters.commandAfter, settings.commandAfter],
+            autoClose: store.getters.autoClose
         };
         await invokeInMain('run-game', JSON.stringify(params));
         return '';

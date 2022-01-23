@@ -62,7 +62,8 @@ export type RunExeParams = {
     commandsAfter: string[]
 }
 export type RunGameParams = RunExeParams & {
-    gameSettings: GameSettings
+    gameSettings: GameSettings,
+    autoClose: boolean
 }
 export type RunCustomGameParams = RunExeParams & {
     withAppLocale: boolean,

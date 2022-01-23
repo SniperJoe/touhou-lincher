@@ -542,27 +542,13 @@ async function RunGame(runGameParams: RunWindowsGameParams) {
         const wineArgs = `./bin/thcrap_loader.exe "${gameSettings.thcrapProfile}" ${executableThcrapProfile}`;
         const localeArgs = gameSettings.thcrapWithAppLocale ? 'LANG=ja_JP.UTF-8 ' : '';
         const command = `cd "${workingDir}" && ${winePrefixCommand}${localeArgs}${wineCommand} ${wineArgs}`;
-        console.log(command);
-        for (const cmd of runGameParams.commandsBefore.filter(c => !!c)) {
-            await TryExecAsync(cmd);
-        }
-        await TryExecAsync(command);
-        for (const cmd of runGameParams.commandsAfter.filter(c => !!c)) {
-            await TryExecAsync(cmd);
-        }
+        await runWithCommandsBeforeAndAfter(command, runGameParams.commandsBefore, runGameParams.commandsAfter, runGameParams.autoClose);
     } else {
         const workingDir = path.dirname(gameSettings.executables[launchProfile].path);
         const wineArgs = path.basename(gameSettings.executables[launchProfile].path);
         const localeArgs = gameSettings.executables[launchProfile].withAppLocale ? 'LANG=ja_JP.UTF-8 ' : '';
         const command = `cd "${workingDir}" && ${winePrefixCommand}${localeArgs}${wineCommand} ${wineArgs}`;
-        for (const cmd of runGameParams.commandsBefore.filter(c => !!c)) {
-            await TryExecAsync(cmd);
-        }
-        console.log(command);
-        // await TryExecAsync(command);
-        for (const cmd of runGameParams.commandsAfter.filter(c => !!c)) {
-            await TryExecAsync(cmd);
-        }
+        await runWithCommandsBeforeAndAfter(command, runGameParams.commandsBefore, runGameParams.commandsAfter, runGameParams.autoClose);
     }
 }
 function findLaunchProfile(gameSettings: GameSettings, thcrapFound: boolean, isCustomExe: boolean) : GameLaunchProfile | CustomExeLaunchProfile | null {
@@ -607,17 +593,35 @@ async function RunPC98Game(runGameParams: RunPC98GameParams) : Promise<string> {
             return writeHdiPathToNekoConfigResult;
         }
         const command = `cd "${nekoDirectory}" && ${winePrefixCommand}${wineCommand} ${path.basename(nekoProjectPath)}`;
-        console.log(command);
-        for (const cmd of runGameParams.commandsBefore.filter(c => !!c)) {
-            await TryExecAsync(cmd);
-        }
-        await TryExecAsync(command);
-        for (const cmd of runGameParams.commandsAfter.filter(c => !!c)) {
-            await TryExecAsync(cmd);
-        }
+        await runWithCommandsBeforeAndAfter(command, runGameParams.commandsBefore, runGameParams.commandsAfter, runGameParams.autoClose);
         return '';
     }
     return 'nekoPath';
+}
+async function runWithCommandsBeforeAndAfter(command: string, commandsBefore: string[], commandsAfter: string[], autoClose: boolean) {
+    for (const cmd of commandsBefore.filter(c => !!c)) {
+        await TryExecAsync(cmd);
+    }
+    commandsAfter = commandsAfter.filter(c => !!c);
+    if (commandsAfter.length) {
+        if (autoClose) { 
+            mainWindow.minimize();
+        }
+        await TryExecAsync(command);
+        for (const cmd of commandsAfter.filter(c => !!c)) {
+            await TryExecAsync(cmd);
+        }
+        if (autoClose) {
+            mainWindow.close();
+        }
+    } else {
+        if (autoClose) {
+            TryExecAsync(command);
+            mainWindow.close();
+        } else {
+            await TryExecAsync(command);
+        }
+    }
 }
 async function writeHdiPathToNekoConfig(nekoConfigPath: string, gameWindowsPath: string) : Promise<string> {
     const config  = await fs.readFile(nekoConfigPath, {encoding: 'utf16le'});
