@@ -124,15 +124,7 @@ function addIpcListeners() {
             });
         },
         'check-neko-project-path':  async (_, pathToCheck: string) => {
-            try {
-                const nekoProjectDir = path.dirname(pathToCheck);
-                await fs.readdir(nekoProjectDir);
-                await fs.readFile(path.resolve(nekoProjectDir, 'np21nt.ini'), { encoding: 'utf-8' });
-                return true;
-            }
-            catch {
-                return false;
-            }
+            return checkExists(path.resolve(path.dirname(pathToCheck), 'np21nt.ini'));
         },
         'configure-thcrap':  async(_, thcrapPath: string) => {
             const thcrapConfiguratorPath = path.resolve(path.dirname(thcrapPath), 'bin/thcrap_configure.exe');
