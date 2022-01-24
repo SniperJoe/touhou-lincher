@@ -10,10 +10,10 @@ import { categoryNames, CustomExeLaunchProfile, customExeLaunchProfiles, CustomG
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import axios from 'axios';
-import { Channel, channels } from './background-functions';
+import { MainProcessFunctions, MainProcessHandler, MainProcessHandlers } from './background-functions';
 import { ReadStream } from 'original-fs';
 import { categories, categoryTitles, gameTitles, thcrapGameNames } from './constants';
-import { RendererChannel } from './renderer-functions';
+import { RendererProcessFunctions } from './renderer-functions';
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 type ReturnTypeAsync<T> = T extends (...args: any) => Promise<infer R> ? R : any;
@@ -26,7 +26,7 @@ protocol.registerSchemesAsPrivileged([
 let mainWindow: BrowserWindow;
 let appIcon: Tray;
 
-function sendToRenderer(channel: RendererChannel, ...args: any) {
+function sendToRenderer<K extends keyof RendererProcessFunctions>(channel: K, ...args: Parameters<RendererProcessFunctions[K]>) {
     mainWindow.webContents.send(channel, ...args);
 }
 async function TryReadFile(file: string) : Promise<string | null> {
@@ -85,7 +85,7 @@ async function TryExecAsync(command: string): Promise<{ stdout: string; stderr: 
     }
 }
 function addIpcListeners() {
-    const ipcListeners: Record<Channel, (event: Electron.IpcMainInvokeEvent, ...args: any[]) => any> = {
+    const ipcListeners: MainProcessHandlers = {
         'get-settings':  async () => {
             try {
                 return await fs.readFile('settings.json', { encoding: 'utf-8' });
@@ -101,7 +101,7 @@ function addIpcListeners() {
         'set-settings':  async (event, settings: string) => {
             await fs.writeFile('settings.json', settings, {encoding: 'utf-8'});
         },
-        'pick-exe':  async (event, settings: string) => {
+        'pick-exe':  async () => {
             return await pickFromFS({ 
                 properties: ['openFile'], 
                 filters: [ 
@@ -112,7 +112,7 @@ function addIpcListeners() {
                 ] 
             });
         },
-        'pick-hdi':  async (event, settings: string) => {
+        'pick-hdi':  async () => {
             return await pickFromFS({ 
                 properties: ['openFile'], 
                 filters: [ 
@@ -383,9 +383,14 @@ function addIpcListeners() {
             mainWindow.setSkipTaskbar(false);
         },
     };
-    for (const channel of channels) {
-        ipcMain.handle(channel, ipcListeners[channel]);
+    for (const channel in ipcListeners) {
+        if (isMainProcessFunctionName(channel, ipcListeners)) {
+            ipcMain.handle(channel, ipcListeners[channel]);
+        }
     }
+}
+function isMainProcessFunctionName(channel: string, ipcListeners: MainProcessHandlers): channel is keyof MainProcessFunctions {
+    return typeof ipcListeners[channel as keyof MainProcessFunctions] === 'function';
 }
 async function loadDataUrlImgFromExe(exePath: string) {
     const output = await TryExecAsync(`wrestool -x -t 14 "${exePath}" | base64`);

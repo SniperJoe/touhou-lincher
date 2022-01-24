@@ -1,2 +1,10 @@
-export const rendererChannels = ['get-replays-path', 'minimized', 'open', 'run-custom-game', 'run-game', 'run-random-game'] as const;
-export type RendererChannel = typeof rendererChannels[number];
+import { CustomGame, GameName } from "./data-types";
+
+export type RendererProcessFunctions = {
+    'get-replays-path' : (...args: [string]) => Promise<void>,
+    'minimized': () => void,
+    'open': () => void,
+    'run-custom-game': (customGame: CustomGame) => void,
+    'run-game': (game: GameName) => void,
+    'run-random-game': () => void
+}

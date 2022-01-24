@@ -44,11 +44,11 @@ async function getReplaysPath(url:string, store: Store) {
     const fileName = url.substring(url.lastIndexOf('/') + 1);
     const gameName = gameNameFromReplayFilename(fileName);
     if (gameName) {
-        const gamePath = findGamePath(gameName, store);
+        const gamePath = await findGamePath(gameName, store);
         if (gamePath) {
             await invokeInMain('save-replay', url, gamePath, gameName);
             return;
         }
+        await invokeInMain('save-replay', url, '', gameName);
     }
-    await invokeInMain('save-replay', url, '', gameName);
 }
