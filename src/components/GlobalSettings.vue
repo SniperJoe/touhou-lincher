@@ -18,7 +18,8 @@
         "browse": "Browse",
         "default": "Default",
         "selectAll": "Select all",
-        "selectNone": "Select none"
+        "selectNone": "Select none",
+        "autoCloseExplain": "Automatically close the launcher after launching a game"
     },
     "ru": {
         "launcherSettings": "Общие настройки",
@@ -38,7 +39,8 @@
         "browse": "Обзор",
         "default": "По умолчанию",
         "selectAll": "Выбрать все",
-        "selectNone": "Снять выбор"
+        "selectNone": "Снять выбор",
+        "autoCloseExplain": "Автоматически закрывать программу после запуска игры"
     },
     "jp": {
         "selectAll": "全部",
@@ -56,7 +58,9 @@
                 <div class="text-h6">{{ t('launcherSettings') }}</div>
             </QItem>
             <QItem>
-                <QCheckbox v-model="autoClose" :label="t('autoClose')"></QCheckbox>
+                <QCheckbox v-model="autoClose" :label="t('autoClose')">
+                    <QTooltip anchor="top right" self="bottom middle">{{ t('autoCloseExplain') }}</QTooltip>
+                </QCheckbox>
             </QItem>
             <QItem>
                 <QCheckbox v-model="minimizeToTray" :label="t('minimizeToTray')"></QCheckbox>
