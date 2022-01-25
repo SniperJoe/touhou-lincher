@@ -24,6 +24,9 @@ function isPC98GameConfigured(gameSettings: GameSettings, nekoProjectPathValid: 
     return nekoProjectPathValid && !!gameSettings.hdiPath;
 }
 function isWindowsGameConfigured(gameSettings: GameSettings, thcrapFound: boolean): boolean {
+    if (!gameSettings.executables) {
+        debugger;
+    }
     return (gameSettings.thcrapProfile &&
         gameSettings.thcrapGameProfile &&
         thcrapFound

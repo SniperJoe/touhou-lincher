@@ -107,7 +107,7 @@ const showText = computed(() => {
     return gameSettings.value.showText;
 });
 const title = computed(() => {
-    return gameTitles[props.gameName];
+    return gameTitles[store.getters.language][props.gameName];
 });
 const configured = computed(() => isGameConfigured(props.gameName, gameSettings.value, store.getters.nekoProjectPathValid, store.getters.thcrapFound));
 

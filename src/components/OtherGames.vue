@@ -5,6 +5,9 @@
     },
     "ru": {
         "otherGames": "Другие игры"
+    },
+    "jp": {
+        "otherGames": "他のゲーム"
     }
 }
 </i18n>

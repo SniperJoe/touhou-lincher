@@ -39,6 +39,12 @@
         "default": "По умолчанию",
         "selectAll": "Выбрать все",
         "selectNone": "Снять выбор"
+    },
+    "jp": {
+        "selectAll": "全部",
+        "selectNone": "なし",
+        "language": "語",
+        "alwaysShowTrayIcon": "トレイアイコンを常に表示する"
     }
 }
 </i18n>
@@ -105,7 +111,7 @@
 
 <script lang="ts" setup>
 import { shortGameTitles, categories, categoryTitles } from '@/constants';
-import { GameName, SelectOptions, SupportedLang } from '@/data-types';
+import { GameName, gameNames, SelectOptions, SupportedLang } from '@/data-types';
 import { ActionTypes } from '@/store/actions';
 import AutoconfigureThcrap from './AutoconfigureThcrap.vue';
 import LinuxSettings from './LinuxSettings.vue';
@@ -180,14 +186,14 @@ const showTrayIcon = computed({
 });
 
 function getGameTitle(game: GameName) {
-    return shortGameTitles[game];
+    return shortGameTitles[store.getters.language][game];
 }
 
 function selectAllRandomGames() {
-    store.dispatch(ActionTypes.SET_RANDOM_GAMES, { gameNames: Object.keys(shortGameTitles) as GameName[], enabled: true });
+    store.dispatch(ActionTypes.SET_RANDOM_GAMES, { gameNames: Array.from(gameNames), enabled: true });
 }
 function deselectAllRandomGames() {
-    store.dispatch(ActionTypes.SET_RANDOM_GAMES, { gameNames: Object.keys(shortGameTitles) as GameName[], enabled: false });
+    store.dispatch(ActionTypes.SET_RANDOM_GAMES, { gameNames: Array.from(gameNames), enabled: false });
 }
 
 async function browse(set: (arg0: string) => void) { // eslint-disable-line no-unused-vars

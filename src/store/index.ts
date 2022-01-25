@@ -9,7 +9,6 @@ import {
 import { actions, IActions } from './actions';
 import { mutations, TMutations } from './mutations';
 import { defaultGamesSettings, defaultRandomGames, defaultThcrapConfig, defaultNamedPaths, defaultCustomGameRootCategory } from './defaults';
-import { gameTitles } from '@/constants';
 
 export type Store = Omit<
     VuexStore<State>,
@@ -34,7 +33,6 @@ export const store: Store = createStore<State>({
     state() {
         return {
             gamesSettings: defaultGamesSettings,
-            gameTitles,
             thcrapConfig: defaultThcrapConfig,
             randomGames: defaultRandomGames,
             autoClose: false,

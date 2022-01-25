@@ -7,7 +7,7 @@ import { addRendererIpcListeners } from './renderer-ipc-listeners';
 import { ActionTypes } from './store/actions';
 import { createI18n } from 'vue-i18n';
 const i18n = createI18n({
-    locale: 'ru',
+    locale: 'en',
     legacy: false
 });
 createApp(App)

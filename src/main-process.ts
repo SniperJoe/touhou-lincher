@@ -713,7 +713,7 @@ function buildGamesSubMenu(menuTemplate: (Electron.MenuItem | Electron.MenuItemC
             label: categoryTitles[categoryName][lang],
             type: 'submenu',
             submenu: categoryGames.map(mg => ({
-                label: gameTitles[mg], 
+                label: gameTitles[lang][mg], 
                 type: 'normal',
                 click: () => sendToRenderer('run-game', mg),
                 icon: assureExists(`public/tray-imgs/Icon_${thcrapGameNames[mg]}.png`)

@@ -1,7 +1,6 @@
-import { gameTitles } from '@/constants';
-import { GameName, ThcrapConfig, GameSettings, NamedPaths, CustomGameCategory } from '@/data-types';
+import { GameName, ThcrapConfig, GameSettings, NamedPaths, CustomGameCategory, gameNames } from '@/data-types';
 
-export const defaultGamesSettings = Object.keys(gameTitles).reduce((acc: Record<string, GameSettings>, key: string) => {
+export const defaultGamesSettings = gameNames.reduce((acc: Record<string, GameSettings>, key: string) => {
     acc[key] = {
         showBanner: true,
         showText: true,
@@ -43,7 +42,7 @@ export const defaultGamesSettings = Object.keys(gameTitles).reduce((acc: Record<
     return acc;
 }, {}) as Record<GameName, GameSettings>;
 
-export const defaultRandomGames = Object.keys(gameTitles) as GameName[];
+export const defaultRandomGames = Array.from(gameNames);
 export const defaultThcrapConfig : ThcrapConfig = {
     profiles: [],
     games: {}

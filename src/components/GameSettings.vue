@@ -97,6 +97,15 @@
         "cantFindGamePath": "Ни один исполняемый файл не настроен и корректный путь не найден в thcrap",
         "default": "по умолч.",
         "none": "Нет"
+    },
+    "jp": {
+        "editVpatch": "vpatch.iniを編集する",
+        "gameLaunchProfileOptions": {
+            "jp": "日本語/vpatch.ini",
+            "en": "英語 (non-THCRAP)",
+            "thcrap": "thcrap"
+        },
+        "greyBanner": "灰色画像"
     }
 }
 </i18n>

@@ -9,10 +9,17 @@
     },
     "ru": {
         "games": "Игры",
-        "customGames": "Свои игры",
+        "customGames": "Другие игры",
         "replays": "Повторы",
         "settings": "Настройки",
         "info": "Информация"
+    },
+    "jp": {
+        "games": "ゲーム",
+        "replays": "リプレイ",
+        "settings": "設定",
+        "customGames": "非東方ゲーム",
+        "info": "情報"
     }
 }
 </i18n>

@@ -33,6 +33,16 @@
         "random": "Запустить случайную игру",
         "game": "Игра",
         "path": "Путь"
+    },
+    "jp": {
+        "sort": "並べ替え",
+        "ascending": "昇順",
+        "descending": "降順",
+        "view": "表示",
+        "tile": "並べて表示",
+        "addGame": "ゲームを足す",
+        "addCategory": "怪綺談",
+        "details": "詳細"
     }
 }
 </i18n>

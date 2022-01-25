@@ -5,14 +5,19 @@
         "openFolder": "Open folder",
         "openWithAppLocale": "Open with AppLocale",
         "delete": "Delete",
-        "rename": "Rename"
+        "rename": "Rename",
+        "deleteConfirm": "Are you sure you want to delete \"{name}\" from {categoryName}?"
     },
     "ru": {
         "winePrefix": "Префикс Wine",
         "openFolder": "Открыть каталог",
         "openWithAppLocale": "Открыть с AppLocale",
         "delete": "Удалить",
-        "rename": "Переименовать"
+        "rename": "Переименовать",
+        "deleteConfirm": "Вы уверены, что хотите удалить \"{name}\" из {categoryName}?"
+    },
+    "jp": {
+        "deleteConfirm": "{name}を消すか？"
     }
 }
 </i18n>
@@ -136,7 +141,7 @@ async function run(withAppLocale: boolean) {
 }
 function deleteGame() {
     $q.dialog({
-        message: `Are you sure you want to delete "${props.game.name}" from ${store.getters.customGamesCategoryName(props.parentId)}?`,
+        message: t('deleteConfirm', { name: props.game.name, categoryName: store.getters.customGamesCategoryName(props.parentId) }),
         cancel: true,
         persistent: true
     }).onOk(() => {

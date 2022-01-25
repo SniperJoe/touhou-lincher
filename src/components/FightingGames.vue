@@ -5,6 +5,9 @@
     },
     "ru": {
         "fightingGames": "Файтинги"
+    },
+    "jp": {
+        "fightingGames": "格闘ゲーム"
     }
 }
 </i18n>
