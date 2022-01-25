@@ -102,8 +102,8 @@ function addIpcListeners() {
         'set-settings':  async (event, settings: string) => {
             await fs.writeFile('settings.json', settings, {encoding: 'utf-8'});
         },
-        'pick-exe':  async () => {
-            return await pickFromFS({ 
+        'pick-exe':  async (_, allowLinuxExe) => {
+            const config: Electron.OpenDialogOptions = { 
                 properties: ['openFile'], 
                 filters: [ 
                     { 
@@ -111,7 +111,14 @@ function addIpcListeners() {
                         extensions: ['exe', 'bat', 'lnk']
                     } 
                 ] 
-            });
+            };
+            if (allowLinuxExe && config.filters) {
+                config.filters.push({ 
+                    name: 'Executable Files',
+                    extensions: ['']
+                })
+            }
+            return await pickFromFS(config);
         },
         'pick-hdi':  async () => {
             return await pickFromFS({ 
@@ -125,7 +132,7 @@ function addIpcListeners() {
             });
         },
         'check-neko-project-path':  async (_, pathToCheck: string) => {
-            return checkExists(path.resolve(path.dirname(pathToCheck), 'np21nt.ini'));
+            return checkExists(path.resolve(path.dirname(pathToCheck), 'np21nt.ini')) || checkExists(path.resolve(path.dirname(pathToCheck), 'xnp21kai'));
         },
         'configure-thcrap':  async(_, thcrapPath: string) => {
             const thcrapConfiguratorPath = path.resolve(path.dirname(thcrapPath), 'bin/thcrap_configure.exe');
@@ -203,15 +210,15 @@ function addIpcListeners() {
                     currentMaxId = we.id;
                 }
             });
-            const userName = await getSystemUsername();
-            if (userName) {
-                const { stdout: protonsOut } = await TryExecAsync(`ls /home/${userName}/.local/share/Steam/steamapps/common/ | grep Proton`);
+            const homeFolder = await getHomeFolder();
+            if (homeFolder) {
+                const { stdout: protonsOut } = await TryExecAsync(`ls ${path.resolve(homeFolder, '.local', 'share', 'Steam', 'steamapps', 'common')} | grep Proton`);
                 if (protonsOut) {
                     const protonPathes = protonsOut.split('\n').filter(s => !!s);
                     const protons : NamedPath[] = protonPathes.map((pp, index) => ({
                         id: currentMaxId + index + 1,
                         name: pp,
-                        path: `/home/${userName}/.local/share/Steam/steamapps/common/${pp}/dist/bin/wine`
+                        path: path.resolve(homeFolder, '.local', 'share', 'Steam', 'steamapps', 'common', pp, 'dist', 'bin', 'wine')
                     }));
                     return wineExecutables.concat(protons);
                 }
@@ -514,10 +521,10 @@ async function pickFromFS(options: Electron.OpenDialogOptions): Promise<string> 
     }
     return '';
 }
-async function getSystemUsername(): Promise<string> {
-    const { stdout: userNameOut } = await TryExecAsync(`echo $USER`);
-    if (userNameOut) {
-        return userNameOut.replace('\n', '');
+async function getHomeFolder(): Promise<string> {
+    const { stdout: homeFolderOut } = await TryExecAsync(`echo $HOME`);
+    if (homeFolderOut) {
+        return homeFolderOut.replace('\n', '');
     }
     return '';
 }
@@ -581,27 +588,42 @@ function isLaunchProfileConfigured(gameSettings: GameSettings, launchProfile: Ga
     }
 }
 async function RunPC98Game(runGameParams: RunPC98GameParams) : Promise<string> {
-    const {gameSettings, defaultWinePrefix, defaultWineExec, winePrefixes, wineExecs, nekoProjectPath, nekoProjectPathValid} = runGameParams;
+    const {gameSettings, nekoProjectPath, nekoProjectPathValid} = runGameParams;
     if (nekoProjectPathValid) {
-        const {wineCommand, winePrefixCommand} = getWineParams(runGameParams);
         if (!checkExists(gameSettings.hdiPath)) {
             return 'hdiPath';
         }
-        const driveResult = await createWineDrive(path.dirname(gameSettings.hdiPath), winePrefixCommand);
-        if (!driveResult.success) {
-            return 'winePrefix';
-        }
-        const gameWindowsPath = `${driveResult.letter.toUpperCase()}:\\${path.basename(gameSettings.hdiPath)}`;
         const nekoDirectory = path.dirname(nekoProjectPath)
-        const nekoConfigPath = path.resolve(nekoDirectory, "np21nt.ini");
-        console.log('neko config path: '+nekoConfigPath);
-        const writeHdiPathToNekoConfigResult = await writeHdiPathToNekoConfig(nekoConfigPath, gameWindowsPath);
-        if (writeHdiPathToNekoConfigResult) {
-            return writeHdiPathToNekoConfigResult;
+        let nekoConfigPath = path.resolve(nekoDirectory, "np21nt.ini");
+        if (checkExists(nekoConfigPath)) {
+             const {wineCommand, winePrefixCommand} = getWineParams(runGameParams);
+            const driveResult = await createWineDrive(path.dirname(gameSettings.hdiPath), winePrefixCommand);
+            if (!driveResult.success) {
+                return 'winePrefix';
+            }
+            const gameWindowsPath = `${driveResult.letter.toUpperCase()}:\\${path.basename(gameSettings.hdiPath)}`;
+            console.log('neko config path: '+nekoConfigPath);
+            const writeHdiPathToNekoConfigResult = await writeHdiPathToNekoConfig(nekoConfigPath, gameWindowsPath, 'utf16le');
+            if (writeHdiPathToNekoConfigResult) {
+                return writeHdiPathToNekoConfigResult;
+            }
+            const command = `cd "${nekoDirectory}" && ${winePrefixCommand}${wineCommand} ${path.basename(nekoProjectPath)}`;
+            await runWithCommandsBeforeAndAfter(command, runGameParams.commandsBefore, runGameParams.commandsAfter, runGameParams.autoClose);
+            return '';
+        } else {
+            const homeFolder = await getHomeFolder();
+            if (homeFolder) {
+                nekoConfigPath = path.resolve(homeFolder, '.config', 'xnp21kai', 'xnp21kairc');
+                console.log('neko config path: '+nekoConfigPath);
+                const writeHdiPathToNekoConfigResult = await writeHdiPathToNekoConfig(nekoConfigPath, gameSettings.hdiPath, 'utf-8');
+                if (writeHdiPathToNekoConfigResult) {
+                    return writeHdiPathToNekoConfigResult;
+                }
+                const command = `cd "${nekoDirectory}" && ./xnp21kai`;
+                await runWithCommandsBeforeAndAfter(command, runGameParams.commandsBefore, runGameParams.commandsAfter, runGameParams.autoClose);
+                return '';
+            }
         }
-        const command = `cd "${nekoDirectory}" && ${winePrefixCommand}${wineCommand} ${path.basename(nekoProjectPath)}`;
-        await runWithCommandsBeforeAndAfter(command, runGameParams.commandsBefore, runGameParams.commandsAfter, runGameParams.autoClose);
-        return '';
     }
     return 'nekoPath';
 }
@@ -630,15 +652,16 @@ async function runWithCommandsBeforeAndAfter(command: string, commandsBefore: st
         }
     }
 }
-async function writeHdiPathToNekoConfig(nekoConfigPath: string, gameWindowsPath: string) : Promise<string> {
-    const config  = await fs.readFile(nekoConfigPath, {encoding: 'utf16le'});
+async function writeHdiPathToNekoConfig(nekoConfigPath: string, gameHdiPath: string, encoding: BufferEncoding) : Promise<string> {
+    const config  = await fs.readFile(nekoConfigPath, {encoding});
     const configLines = config.split('\n');
+    let hddFileStringMatch: RegExpMatchArray | null = null;
     for (let i = 0; i < config.length; i++) {
-        if (configLines[i].includes("HDD1FILE=")) {
-            if (configLines[i] != "HDD1FILE=" + gameWindowsPath) {
+        if (hddFileStringMatch = configLines[i].match(/HDD1FILE ?= ?/)) {
+            if (configLines[i].replace(hddFileStringMatch[0], '') != gameHdiPath) {
                 try {
-                    configLines[i] = "HDD1FILE=" + gameWindowsPath;
-                    await fs.writeFile(nekoConfigPath, configLines.join('\n'), {encoding: 'utf16le'});
+                    configLines[i] = hddFileStringMatch[0] + gameHdiPath;
+                    await fs.writeFile(nekoConfigPath, configLines.join('\n'), {encoding});
                 }
                 catch {
                     return 'writeConfig';
@@ -700,9 +723,9 @@ function tryGetGroup(str: string, regexp: RegExp, group: string) {
     return match && match.groups ? match.groups[group] : '';
 }
 async function getDefaultWinePrefix() : Promise<string> {
-    const userName = await getSystemUsername();
-    if (userName) {
-        return `/home/${userName}/.wine`;
+    const homeFolder = await getHomeFolder();
+    if (homeFolder) {
+        return path.resolve(homeFolder, '.wine');
     }
     return '';
 }

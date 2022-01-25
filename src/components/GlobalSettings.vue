@@ -8,7 +8,7 @@
         "language": "Language",
         "nekoIILocation": "Neko Project II location",
         "thcrapLocation": "thcrap_loader location",
-        "folderNotfound": "folder not found",
+        "np2Notfound": "Neko Project not found",
         "thcrapNotFound": "thcrap configs not found",
         "thcrapStartingRepo": "thcrap starting repository",
         "responseInvalid": "could not get a valid response",
@@ -28,7 +28,7 @@
         "language": "Язык",
         "nekoIILocation": "Путь к Neko Project II",
         "thcrapLocation": "Путь к thcrap_loader",
-        "folderNotfound": "Каталог не найден",
+        "np2Notfound": "Neko Project не найден",
         "thcrapNotFound": "Настройки thcrap не найдены",
         "thcrapStartingRepo": "Стартовый репозиторий thcrap",
         "responseInvalid": "Получен некорректный ответ",
@@ -71,13 +71,13 @@
             </div>
             <QItemLabel header>{{ t('nekoIILocation') }}:</QItemLabel>
             <div class="q-pl-md q-pr-md row gap-10 justify-between">
-                <PostponedInput v-model="nekoIILocation" :show-toolip="true" :validation-message="nekoIILocationValid || !nekoIILocation ? '' : t('folderNotfound')"></PostponedInput>
-                <QBtn :label="t('browse')" class="fit-content" @click="browse(val => { nekoIILocation = val })"></QBtn>
+                <PostponedInput v-model="nekoIILocation" :show-toolip="true" :validation-message="nekoIILocationValid || !nekoIILocation ? '' : t('np2Notfound')"></PostponedInput>
+                <QBtn :label="t('browse')" class="fit-content" @click="browse(val => { nekoIILocation = val }, true)"></QBtn>
             </div>
             <QItemLabel header>{{ t('thcrapLocation') }}:</QItemLabel>
             <div class="q-pl-md q-pr-md row gap-10 justify-between">
                 <PostponedInput v-model="thcrapLocation" :show-toolip="true" :validation-message="thcrapLocationValid || !thcrapLocation ? '' : t('thcrapNotFound')"></PostponedInput>
-                <QBtn :label="t('browse')" class="fit-content" @click="browse(val => { thcrapLocation = val })"></QBtn>
+                <QBtn :label="t('browse')" class="fit-content" @click="browse(val => { thcrapLocation = val }, false)"></QBtn>
             </div>
             <QItemLabel header>{{ t('thcrapStartingRepo') }}:</QItemLabel>
             <div class="q-pl-md q-pr-md row gap-10 justify-between">
@@ -196,8 +196,8 @@ function deselectAllRandomGames() {
     store.dispatch(ActionTypes.SET_RANDOM_GAMES, { gameNames: Array.from(gameNames), enabled: false });
 }
 
-async function browse(set: (arg0: string) => void) { // eslint-disable-line no-unused-vars
-    const path: string = await invokeInMain('pick-exe');
+async function browse(set: (arg0: string) => void, allowLinuxExe: boolean) { // eslint-disable-line no-unused-vars
+    const path: string = await invokeInMain('pick-exe', allowLinuxExe);
     if (path) {
         set(path);
     }
