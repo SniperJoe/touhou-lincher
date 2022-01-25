@@ -1,7 +1,7 @@
 import { GetterTree } from 'vuex';
 import State from './state';
 import { thcrapGameNames } from '../constants';
-import { CustomGame, CustomGameCategory, GameName, GameSettings, NamedPath, NamedPathType } from '@/data-types';
+import { CustomGame, CustomGameCategory, GameName, GameSettings, NamedPath, NamedPathType, SupportedLang } from '@/data-types';
 import { findCategoryAndRun } from './utils';
 
 export type Getters = {
@@ -27,6 +27,7 @@ export type Getters = {
     customGamesOfCategory: (state: State) => (id: number) => CustomGame[];
     thcrapMainGamePath: (state: State) => (gameName: GameName) => string;
     customGamesCategoryName: (state: State) => (categoryId: number) => string;
+    language: (state: State) => SupportedLang;
 }
 
 export const getters: GetterTree<State, State> & Getters = {
@@ -80,5 +81,6 @@ export const getters: GetterTree<State, State> & Getters = {
         let categoryName = '';
         findCategoryAndRun(categoryId, c => { categoryName = c.name; }, state.customGames.children);
         return categoryName;
-    }
+    },
+    language: (state: State) => state.language
 };

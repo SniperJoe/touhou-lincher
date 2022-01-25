@@ -1,53 +1,98 @@
+<i18n lang="json">
+{
+    "en": {
+        "launcherSettings": "Launcher settings",
+        "autoClose": "Auto-Close",
+        "minimizeToTray":"Minimize to tray",
+        "alwaysShowTrayIcon": "Always show tray icon",
+        "language": "Language",
+        "nekoIILocation": "Neko Project II location",
+        "thcrapLocation": "thcrap_loader location",
+        "folderNotfound": "folder not found",
+        "thcrapNotFound": "thcrap configs not found",
+        "thcrapStartingRepo": "thcrap starting repository",
+        "responseInvalid": "could not get a valid response",
+        "randomGameSettings": "Random Game settings",
+        "randomGames": "Games that will be included in the\nrandom game option",
+        "configThcrap": "Configure thcrap",
+        "browse": "Browse",
+        "default": "Default",
+        "selectAll": "Select all",
+        "selectNone": "Select none"
+    },
+    "ru": {
+        "launcherSettings": "Общие настройки",
+        "autoClose": "Автозакрытие",
+        "minimizeToTray":"Сворачивать в трей",
+        "alwaysShowTrayIcon": "Всегда показывать иконку в трее",
+        "language": "Язык",
+        "nekoIILocation": "Путь к Neko Project II",
+        "thcrapLocation": "Путь к thcrap_loader",
+        "folderNotfound": "Каталог не найден",
+        "thcrapNotFound": "Настройки thcrap не найдены",
+        "thcrapStartingRepo": "Стартовый репозиторий thcrap",
+        "responseInvalid": "Получен некорректный ответ",
+        "randomGameSettings": "Настройки случайного запуска",
+        "randomGames": "Игры, которые будут включены в\nслучайный запуск",
+        "configThcrap": "Настроить thcrap",
+        "browse": "Обзор",
+        "default": "По умолчанию",
+        "selectAll": "Выбрать все",
+        "selectNone": "Снять выбор"
+    }
+}
+</i18n>
+
 <template>
     <div class="row q-pa-md gap-10 no-wrap">
         <QList bordered class="rounded-borders">
             <QItem>
-                <div class="text-h6">Launcher settings</div>
+                <div class="text-h6">{{ t('launcherSettings') }}</div>
             </QItem>
             <QItem>
-                <QCheckbox v-model="autoClose" label="Auto-Close"></QCheckbox>
+                <QCheckbox v-model="autoClose" :label="t('autoClose')"></QCheckbox>
             </QItem>
             <QItem>
-                <QCheckbox v-model="minimizeToTray" label="Minimize to tray"></QCheckbox>
+                <QCheckbox v-model="minimizeToTray" :label="t('minimizeToTray')"></QCheckbox>
             </QItem>
             <QItem>
-                <QCheckbox v-model="showTrayIcon" label="Always show tray icon"></QCheckbox>
+                <QCheckbox v-model="showTrayIcon" :label="t('alwaysShowTrayIcon')"></QCheckbox>
             </QItem>
             <QSeparator inset></QSeparator>
-            <QItemLabel header>Language</QItemLabel>
+            <QItemLabel header>{{ t('language') }}</QItemLabel>
             <div class="q-pl-md q-pr-md">
                 <QSelect v-model="lang" :options="langs" dense emit-value map-options option-label="label" option-value="value"></QSelect>
             </div>
-            <QItemLabel header>Neko Project II location:</QItemLabel>
-            <div class="q-pl-md q-pr-md row gap-10">
-                <PostponedInput v-model="nekoIILocation" :show-toolip="true" :validation-message="nekoIILocationValid || !nekoIILocation ? '' : 'folder not found'"></PostponedInput>
-                <QBtn label="Browse" class="fit-content" @click="browse(val => { nekoIILocation = val })"></QBtn>
+            <QItemLabel header>{{ t('nekoIILocation') }}:</QItemLabel>
+            <div class="q-pl-md q-pr-md row gap-10 justify-between">
+                <PostponedInput v-model="nekoIILocation" :show-toolip="true" :validation-message="nekoIILocationValid || !nekoIILocation ? '' : t('folderNotfound')"></PostponedInput>
+                <QBtn :label="t('browse')" class="fit-content" @click="browse(val => { nekoIILocation = val })"></QBtn>
             </div>
-            <QItemLabel header>thcrap_loader location:</QItemLabel>
-            <div class="q-pl-md q-pr-md row gap-10">
-                <PostponedInput v-model="thcrapLocation" :show-toolip="true" :validation-message="thcrapLocationValid || !thcrapLocation ? '' : 'thcrap configs not found'"></PostponedInput>
-                <QBtn label="Browse" class="fit-content" @click="browse(val => { thcrapLocation = val })"></QBtn>
+            <QItemLabel header>{{ t('thcrapLocation') }}:</QItemLabel>
+            <div class="q-pl-md q-pr-md row gap-10 justify-between">
+                <PostponedInput v-model="thcrapLocation" :show-toolip="true" :validation-message="thcrapLocationValid || !thcrapLocation ? '' : t('thcrapNotFound')"></PostponedInput>
+                <QBtn :label="t('browse')" class="fit-content" @click="browse(val => { thcrapLocation = val })"></QBtn>
             </div>
-            <QItemLabel header>thcrap starting repository:</QItemLabel>
-            <div class="q-pl-md q-pr-md row gap-10">
-                <PostponedInput v-model="thcrapRepository" :show-toolip="true" :validation-message="thcrapRepositoryValid || !thcrapRepository ? '' : 'could not get a valid response'"></PostponedInput>
-                <QBtn label="Default" class="fit-content" @click="thcrapStartingRepositoryDefault"></QBtn>
+            <QItemLabel header>{{ t('thcrapStartingRepo') }}:</QItemLabel>
+            <div class="q-pl-md q-pr-md row gap-10 justify-between">
+                <PostponedInput v-model="thcrapRepository" :show-toolip="true" :validation-message="thcrapRepositoryValid || !thcrapRepository ? '' : t('responseInvalid')"></PostponedInput>
+                <QBtn :label="t('default')" class="fit-content" @click="thcrapStartingRepositoryDefault"></QBtn>
             </div>
             <div class="q-ma-md">
-                <QBtn class="full-width" label="Configure thcrap" @click="configureThcrap"></QBtn>
+                <QBtn class="full-width" :label="t('configThcrap')" @click="configureThcrap"></QBtn>
             </div>
          </QList>
         <QList bordered class="rounded-borders">
             <QItem>
-                <div class="text-h6">Random Game settings</div>
+                <div class="text-h6">{{ t('randomGameSettings') }}</div>
             </QItem>
-            <div class="text-center q-pl-xl q-pr-xl">Games that will be included in the<br>random game option</div>
+            <div class="text-center q-pl-xl q-pr-xl" style="white-space: pre;">{{ t('randomGames') }}</div>
             <div class="row justify-between q-pa-md">
-                <QBtn label="Select all" @click="selectAllRandomGames"></QBtn>
-                <QBtn label="Select none" @click="deselectAllRandomGames"></QBtn>
+                <QBtn :label="t('selectAll')" @click="selectAllRandomGames"></QBtn>
+                <QBtn :label="t('selectNone')" @click="deselectAllRandomGames"></QBtn>
             </div>
             <QCard class="q-ml-md q-mr-md q-mb-md" v-for="(category, categoryName) in categories" :key="categoryName">
-                <QItemLabel header>{{categoryTitles[categoryName]}}</QItemLabel>
+                <QItemLabel header>{{ categoryTitles[categoryName][store.getters.language] }}</QItemLabel>
                 <div class="checkboxes">
                     <QCheckbox v-for="(game, index) in category" :key="index" v-model="enabledRandomGames[game]" :label="getGameTitle(game)"></QCheckbox>
                 </div>
@@ -64,11 +109,18 @@ import { GameName, SelectOptions, SupportedLang } from '@/data-types';
 import { ActionTypes } from '@/store/actions';
 import AutoconfigureThcrap from './AutoconfigureThcrap.vue';
 import LinuxSettings from './LinuxSettings.vue';
-import { computed, ref } from 'vue';
+import { computed, WritableComputedRef, ref } from 'vue';
 import { store } from '../store';
 import PostponedInput from './PostponedInput.vue';
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
-const lang = ref('en');
+const lang: WritableComputedRef<SupportedLang> = computed({
+    get: () => store.getters.language,
+    set: (v) => {
+        store.dispatch(ActionTypes.SET_LANG, v);
+    }
+});
 const langs : SelectOptions<SupportedLang> = [{ label: 'English', value: 'en' }, { label: '日本語', value: 'jp' }, { label: 'Русский', value: 'ru' }];
 const nekoIILocation = computed({
     get: () => store.getters.nekoProjectPath,

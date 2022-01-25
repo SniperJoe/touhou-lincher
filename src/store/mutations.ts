@@ -1,4 +1,4 @@
-import { CustomGame, CustomGameCategory, GameName, GameSettings, NamedPath, NamedPathType, ThcrapConfig } from '@/data-types';
+import { CustomGame, CustomGameCategory, GameName, GameSettings, NamedPath, NamedPathType, SupportedLang, ThcrapConfig } from '@/data-types';
 import { MutationTree } from 'vuex';
 import State from './state';
 import { findCategoryAndRun, forEachCategory } from './utils';
@@ -49,7 +49,8 @@ export enum MutationTypes {
     ADD_CUSTOM_GAMES_CATEGORY = '23',
     DELETE_CUSTOM_GAMES_CATEGORY = '24',
     EDIT_CUSTOM_GAME = '25',
-    DELETE_CUSTOM_GAME = '26'
+    DELETE_CUSTOM_GAME = '26',
+    SET_LANG = '27'
 }
 
 export type TMutations = {
@@ -79,6 +80,7 @@ export type TMutations = {
     [MutationTypes.DELETE_CUSTOM_GAMES_CATEGORY](state: State, payload: number): void;
     [MutationTypes.EDIT_CUSTOM_GAME](state: State, payload: {parentId: number, game: CustomGame; index: number}): void;
     [MutationTypes.DELETE_CUSTOM_GAME](state: State, payload: {parentId: number, index: number}): void;
+    [MutationTypes.SET_LANG](state: State, payload: SupportedLang): void;
 }
 type MutationsTypeCorrect = TMutations extends {[K in `${MutationTypes}`]: (state: State, payload: any) => void } ? true : false; // eslint-disable-line @typescript-eslint/no-explicit-any
 type Mutations = MutationsTypeCorrect extends true ? TMutations : null;
@@ -207,5 +209,8 @@ export const mutations: MutationTree<State> & Mutations = {
     },
     [MutationTypes.DELETE_CUSTOM_GAME](state: State, payload: {parentId: number, index: number}) {
         findCategoryAndRun(payload.parentId, (_, container, index) => { container[parseInt(index)].games.splice(payload.index, 1); }, state.customGames.children);
+    },
+    [MutationTypes.SET_LANG](state: State, payload: SupportedLang) {
+        state.language = payload;
     }
 };

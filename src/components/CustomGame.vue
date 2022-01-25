@@ -1,3 +1,22 @@
+<i18n lang="json">
+{
+    "en": {
+        "winePrefix": "Wine Prefix",
+        "openFolder": "Open folder",
+        "openWithAppLocale": "Open with AppLocale",
+        "delete": "Delete",
+        "rename": "Rename"
+    },
+    "ru": {
+        "winePrefix": "Префикс Wine",
+        "openFolder": "Открыть каталог",
+        "openWithAppLocale": "Открыть с AppLocale",
+        "delete": "Удалить",
+        "rename": "Переименовать"
+    }
+}
+</i18n>
+
 <template>
     <div class="row items-center custom-game" :class="viewClass[viewType]" @dblclick="run(false)">
         <QImg :src="img" :width="iconWidth[viewType]"></QImg>
@@ -17,7 +36,7 @@
         </QPopupEdit>
         <QMenu context-menu touch-position>
             <QItem clickable>
-                <QItemSection>Wine Prefix</QItemSection>
+                <QItemSection>{{ t('winePrefix') }}</QItemSection>
                 <QItemSection side>
                     <QIcon name="keyboard_arrow_right"></QIcon>
                 </QItemSection>
@@ -47,16 +66,16 @@
                 </QMenu>
             </QItem>
             <QItem clickable v-close-popup @click="openFolder">
-                <QItemSection>Open folder</QItemSection>
+                <QItemSection>{{ t('openFolder') }}</QItemSection>
             </QItem>
             <QItem clickable v-close-popup @click="run(true)">
-                <QItemSection>Open with AppLocale</QItemSection>
+                <QItemSection>{{ t('openWithAppLocale') }}</QItemSection>
             </QItem>
             <QItem clickable v-close-popup @click="deleteGame">
-                <QItemSection>Delete</QItemSection>
+                <QItemSection>{{ t('delete') }}</QItemSection>
             </QItem>
             <QItem clickable v-close-popup @click="renameGame">
-                <QItemSection>Rename</QItemSection>
+                <QItemSection>{{ t('rename') }}</QItemSection>
             </QItem>
         </QMenu>
     </div>
@@ -69,6 +88,8 @@ import { ActionTypes } from '@/store/actions';
 import { computed, ComputedRef, nextTick, Ref, ref, watch } from 'vue';
 import { QPopupEdit, useQuasar } from 'quasar';
 import { runCustomGame } from '@/utils';
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const props = defineProps<{index: number; game: CustomGame; parentId: number; viewType: CustomGamesViewType}>();
 const img = ref('');

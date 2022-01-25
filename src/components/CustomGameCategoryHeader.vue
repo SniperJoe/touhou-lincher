@@ -1,3 +1,18 @@
+<i18n lang="json">
+{
+    "en": {
+        "delete": "Are you sure you want to delete category {name} and all it's contents?",
+        "cancel": "Cancel",
+        "ok": "OK"
+    },
+    "ru": {
+        "delete": "Вы уверены, что хотите удалить категорию {name} и всё её содержимое?",
+        "cancel": "Отмена",
+        "ok": "OK"
+    }
+}
+</i18n>
+
 <template>
     <div class="row items-center">
         {{ modelValue }}
@@ -14,6 +29,8 @@ import { store } from '@/store';
 import { ActionTypes } from '@/store/actions';
 import { QPopupEdit, useQuasar } from 'quasar';
 import { ref, Ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const props = defineProps<{id: number, modelValue: string, selected?: boolean}>();
 const editPopup: Ref<QPopupEdit | null> = ref(null);
@@ -32,8 +49,8 @@ function hideEdit() {
 }
 function remove() {
     $q.dialog({
-        message: `Are you sure you want to delete category "${props.modelValue}" and all it's contents?`,
-        cancel: true,
+        message: t('delete', { name: props.modelValue }),
+        cancel: t('cancel'),
         persistent: true
     }).onOk(() => {
         store.dispatch(ActionTypes.DELETE_CUSTOM_GAMES_CATEGORY, props.id);

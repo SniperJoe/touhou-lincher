@@ -1,4 +1,4 @@
-import { GameName, NamedPath, ThcrapConfig } from "./data-types";
+import { GameName, NamedPath, SupportedLang, ThcrapConfig } from "./data-types";
 
 export type MainProcessFunctions = {
     'show-in-taskbar' : (...args: []) => void,
@@ -39,6 +39,8 @@ export type MainProcessFunctions = {
     'set-settings': (...args: [string]) => void,
     'get-thcrap-config': (...args: [string]) => ThcrapConfig | null,
     'get-settings': (...args: []) => string,
+    'set-lang': (...args: [SupportedLang]) => void
 }
 export type MainProcessHandler<C extends keyof MainProcessFunctions> = (event: Electron.IpcMainInvokeEvent, ...args: Parameters<MainProcessFunctions[C]>) => Promise<ReturnType<MainProcessFunctions[C]>>;
 export type MainProcessHandlers = {[K in keyof MainProcessFunctions]: MainProcessHandler<K>};
+

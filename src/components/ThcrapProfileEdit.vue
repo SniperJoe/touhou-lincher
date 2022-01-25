@@ -1,17 +1,46 @@
+<i18n lang="json">
+{
+    "en": {
+        "save": "Save",
+        "editProfile": "Edit profile",
+        "deleteSelected": "Delete selected",
+        "selectedPatches": "Selected patches",
+        "searchRepos": "Search repositories",
+        "noPatchesSelected": "No patches selected.",
+        "cantSaveProfile": "Cannot save {profileName}",
+        "dependencyNotSelected": "\"{id}\" depends on \"{dependency}\" but it is not selected\n",
+        "dependencyLowerInList": "\"{id}\" depends on \"{dependency}\" but it is lower in the list than \"{id}\"\n",
+        "profileConfigurationErrors": "The profile configuration contains the following errors:\n\n{errors}"
+    },
+    "ru": {
+        "save": "Сохранить",
+        "editProfile": "Настроить профиль",
+        "deleteSelected": "Удалить выбранные",
+        "addGameProfile": "Добавить профиль",
+        "selectedPatches": "Выбранные патчи",
+        "searchRepos": "Поиск репозиториев",
+        "noPatchesSelected": "Ни одного патча не выбрано.",
+        "cantSaveProfile": "Невозможно сохранить {profileName}",
+        "dependencyNotSelected": "\"{id}\" зависит от \"{dependency}\", но он не выбран\n",
+        "dependencyLowerInList": "\"{id}\" зависит от \"{dependency}\", но он ниже в списке, чем \"{id}\"\n",
+        "profileConfigurationErrors": "Настройки профиля содержат следующие ошибки:\n\n{errors}"
+    }
+}
+</i18n>
 <template>
     <QDialog :modelValue="visible" @update:modelValue="closeWin">
         <QCard style="width: 500px;" :class="loading ? 'no-scroll' : ''" ref="mainCard">
             <QCardSection class="row items-center q-pb-none">
-                <div class="text-h6">Edit profile</div>
+                <div class="text-h6">{{ t('editProfile') }}</div>
                 <QSpace></QSpace>
-                <QBtn class="q-mr-md" color="white" text-color="black" label="Save" @click="save"></QBtn>
+                <QBtn class="q-mr-md" color="white" text-color="black" :label="t('save')" @click="save"></QBtn>
                 <QBtn icon="close" flat round dense v-close-popup></QBtn>
             </QCardSection>
             <QCardSection>
                 <QList bordered class="rounded-borders">
                     <QExpansionItem
                     expand-separator
-                    label="Selected patches">
+                    :label="t('selectedPatches')">
                         <QItem
                             tag="label"
                             v-ripple
@@ -33,7 +62,7 @@
                             </QItemSection>
                         </QItem>
                         <QItem v-if="!selectedPatches.length" class="justify-center items-center">
-                            No patches selected.
+                            {{ t('noPatchesSelected') }}
                         </QItem>
                     </QExpansionItem>
                 </QList>
@@ -43,7 +72,7 @@
                     ref="filterRef"
                     filled
                     v-model="reposFilter"
-                    label="Search repositories"
+                    :label="t('searchRepos')"
                     >
                     <template v-slot:append>
                         <QIcon v-if="reposFilter !== ''" name="clear" class="cursor-pointer" @click="reposFilter = ''"></QIcon>
@@ -78,7 +107,7 @@
             </QInnerLoading>
         </QCard>
     </QDialog>
-    <ErrorPopup v-model:visible="showDependencyErrors" :showCloseX="true" :error="dependencyErrors" :errorTitle="`Cannot save ${profileName}`"></ErrorPopup>
+    <ErrorPopup v-model:visible="showDependencyErrors" :showCloseX="true" :error="dependencyErrors" :errorTitle="t('cantSaveProfile', {profileName})"></ErrorPopup>
 </template>
 
 <script lang="ts" setup>
@@ -89,6 +118,8 @@ import type { Ref, UnwrapNestedRefs } from '@vue/reactivity';
 import { ref, reactive, watch } from 'vue';
 import { store } from '../store';
 import type { QCard } from 'quasar';
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const emit = defineEmits<{(e: 'update:visible', visible: boolean): void; (e: 'saved'): void; }>();
 
@@ -352,9 +383,9 @@ function collectDependencyErrors(patch?: ThcrapPatch) : string {
             const dependencyIndexInSelection = selectedPatches.value.findIndex(sp => sp.idWithRepo === dependency);
             const patchIndexInSelection = selectedPatches.value.findIndex(sp => sp.idWithRepo === patch.idWithRepo);
             if (dependencyIndexInSelection === -1) {
-                errors += `"${patch.idWithRepo}" depends on "${dependency}" but it is not selected\n`;
+                errors += t('dependencyNotSelected', { id: patch.idWithRepo, dependency });
             } else if (dependencyIndexInSelection > patchIndexInSelection) {
-                errors += `"${patch.idWithRepo}" depends on "${dependency}" but it is lower in the list than "${patch.idWithRepo}"\n`;
+                errors += t('dependencyLowerInList', { id: patch.idWithRepo, dependency });
             }
         }
         return errors;
@@ -364,7 +395,7 @@ function collectDependencyErrors(patch?: ThcrapPatch) : string {
 async function save() {
     const collectedDependencyErrors = collectDependencyErrors();
     if (collectedDependencyErrors) {
-        dependencyErrors.value = `The profile configuration contains the following errors:\n\n${collectedDependencyErrors}`;
+        dependencyErrors.value = t('profileConfigurationErrors', { errors: collectedDependencyErrors });
         showDependencyErrors.value = true;
     } else {
         profileData.patches = [];

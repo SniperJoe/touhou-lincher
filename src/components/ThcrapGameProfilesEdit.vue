@@ -1,15 +1,34 @@
+<i18n lang="json">
+{
+    "en": {
+        "name": "Name",
+        "path": "Path",
+        "save": "Save",
+        "editGameProfiles": "Edit thcrap game profiles",
+        "deleteSelected": "Delete selected",
+        "addGameProfile": "Add game profile"
+    },
+    "ru": {
+        "name": "Имя",
+        "path": "Путь",
+        "save": "Сохранить",
+        "editGameProfiles": "Редактировать профили игр",
+        "deleteSelected": "Удалить выбранные",
+        "addGameProfile": "Добавить профиль"
+    }
+}
+</i18n>
 <template>
     <QDialog :modelValue="visible" @update:modelValue="closeWin">
         <QCard style="width: 500px;" :class="loading ? 'no-scroll' : ''">
             <QCardSection class="row items-center q-pb-none">
-                <div class="text-h6">Edit profile</div>
+                <div class="text-h6">{{ t('editGameProfiles') }}</div>
                 <QSpace></QSpace>
-                <QBtn class="q-mr-md" color="white" text-color="black" label="Save" @click="save"></QBtn>
+                <QBtn class="q-mr-md" color="white" text-color="black" :label="t('save')" @click="save"></QBtn>
                 <QBtn icon="close" flat round dense v-close-popup></QBtn>
             </QCardSection>
             <QCardSection>
                 <QTable
-                    :title="'Edit thcrap game profiles'"
                     :columns="tablesColumns"
                     :rows="profiles"
                     row-key="name"
@@ -38,9 +57,9 @@
                     </template>
                 </QTable>
                 <div class="row justify-end q-mt-md">
-                    <QBtn @click="deleteProfiles">Delete selected</QBtn>
+                    <QBtn @click="deleteProfiles">{{ t('deleteSelected') }}</QBtn>
                     <QSpace></QSpace>
-                    <QBtn @click="addProfile">Add game profile</QBtn>
+                    <QBtn @click="addProfile">{{ t('addGameProfile') }}</QBtn>
                 </div>
             </QCardSection>
         </QCard>
@@ -49,17 +68,19 @@
 
 <script lang="ts" setup>
 import type { QTableProps } from 'quasar';
-import type { Ref } from '@vue/reactivity';
-import { ref, watch } from 'vue';
+import type { Ref, ComputedRef } from '@vue/reactivity';
+import { ref, watch, computed } from 'vue';
 import { store } from '../store';
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const props = defineProps<{visible: boolean}>();
 const emit = defineEmits<{(e: 'update:visible', visible: boolean): void; (e: 'saved'): void; }>();
-const tablesColumns: QTableProps['columns'] = [
+const tablesColumns: ComputedRef<QTableProps['columns']> = computed(() => [
     {
         name: 'name',
         required: true,
-        label: 'Name',
+        label: t('name'),
         align: 'left',
         field: 'name',
         sortable: true
@@ -67,11 +88,11 @@ const tablesColumns: QTableProps['columns'] = [
     {
         name: 'path',
         align: 'right',
-        label: 'Path',
+        label: t('path'),
         field: 'path',
         sortable: true
     }
-];
+]);
 const selectedProfiles: Ref<{name: string, path: string, id: number}[]> = ref([]);
 const profiles: Ref<{name: string, path: string, id: number}[]> = ref([]);
 const loading = ref(true);

@@ -1,3 +1,34 @@
+<i18n lang="json">
+{
+    "en": {
+        "config": "Configure Game",
+        "runCustom": "Launch custom.exe",
+        "editBtn": "Edit Button",
+        "showBanner": "Show banner",
+        "showText": "Show text",
+        "cannotRun": "Cannot run {title}",
+        "nekoPath": "Neko Project II location is not properly configured",
+        "winePrefix": "Wine prefix is not properly configured and no default prefix found",
+        "writeConfig": "An error occuried while writing Neko Project II config file",
+        "configIncorrect": "Neko Project II config file incorrect (does not contain \"HDD1FILE=\" string)",
+        "hdiPath": "Game HDI path is incorrect or unset"
+    },
+    "ru": {
+        "config": "Настроить игру",
+        "runCustom": "Запустить custom.exe",
+        "editBtn": "Настроить кнопку",
+        "showBanner": "Показать картинку",
+        "showText": "Показать текст",
+        "cannotRun": "Невозможно запустить {title}",
+        "nekoPath": "Путь к Neko Project II не настроен или настроен неверно",
+        "winePrefix": "Префикс Wine не настроен или настроен неверно и префикс по умолчанию не найден",
+        "writeConfig": "Произошла ошибка во время перезаписи конфигурационного файла Neko Project II",
+        "configIncorrect": "Конфигурационный файл Neko Project II некорректен (не содержит строку \"HDD1FILE=\")",
+        "hdiPath": "Путь к HDI образу игры не указан или неверен"
+    }
+}
+</i18n>
+
 <template>
     <QCard class="shadow-transition game-card" :class="hovered ? 'shadow-6' : 'shadow-3'" @mouseenter="hovered = true" @mouseleave="hovered = false" @click="launchGame(false)">
         <div class="banner" :class="{greyscale: !configured}">
@@ -14,13 +45,13 @@
         </div>
         <QMenu context-menu touch-position>
             <QItem clickable v-close-popup @click="configureGame">
-                <QItemSection>Configure Game</QItemSection>
+                <QItemSection>{{ t('config') }}</QItemSection>
             </QItem>
             <QItem clickable v-close-popup v-if="customExeConfigured" @click="launchGame(true)">
-                <QItemSection>Launch custom.exe</QItemSection>
+                <QItemSection>{{ t('runCustom') }}</QItemSection>
             </QItem>
             <QItem clickable>
-                <QItemSection>Edit Button</QItemSection>
+                <QItemSection>{{ t('editBtn') }}</QItemSection>
                 <QItemSection side>
                     <QIcon name="keyboard_arrow_right"></QIcon>
                 </QItemSection>
@@ -28,12 +59,12 @@
                     <QList>
                         <QItem>
                             <QItemSection>
-                                <QCheckbox :modelValue="showBanner" @update:modelValue="toggleShowBanner" label="Show banner"></QCheckbox>
+                                <QCheckbox :modelValue="showBanner" @update:modelValue="toggleShowBanner" :label="t('showBanner')"></QCheckbox>
                             </QItemSection>
                         </QItem>
                         <QItem>
                             <QItemSection>
-                                <QCheckbox :modelValue="showText" @update:modelValue="toggleShowText" label="Show text"></QCheckbox>
+                                <QCheckbox :modelValue="showText" @update:modelValue="toggleShowText" :label="t('showText')"></QCheckbox>
                             </QItemSection>
                         </QItem>
                     </QList>
@@ -42,7 +73,7 @@
         </QMenu>
     </QCard>
     <GameSettings :visible="settingsOpened" :gameName="gameName" :isPC98="isPC98" @close="onSettingsClosed" @runGame="launchGame"></GameSettings>
-    <ErrorPopup v-model:visible="runGameErrorVisible" :showCloseX="true" :error="runGameError" :errorTitle="`Cannot run ${title}`"></ErrorPopup>
+    <ErrorPopup v-model:visible="runGameErrorVisible" :showCloseX="true" :error="runGameError" :errorTitle="t('cannotRun')"></ErrorPopup>
 </template>
 
 <script lang="ts" setup>
@@ -54,6 +85,8 @@ import ErrorPopup from './ErrorPopup.vue';
 import { computed, ref, watch } from 'vue';
 import { store } from '../store';
 import { isGameConfigured, isPC98 as getIsPC98, runGame } from '@/utils';
+import { useI18n } from 'vue-i18n';
+const { t, te } = useI18n();
 
 const props = defineProps<{gameName: GameName, nameColor: number}>();
 
@@ -63,13 +96,6 @@ const customBannerBase64 = ref('');
 const customGreyBannerBase64 = ref('');
 const runGameError = ref('');
 const runGameErrorVisible = ref(false);
-const pc98runErrors: Record<string, string> = {
-    nekoPath: 'Neko Project II location is not properly configured',
-    winePrefix: 'Wine prefix is not properly configured and no default prefix found',
-    writeConfig: 'An error occuried while writing Neko Project II config file',
-    configIncorrect: 'Neko Project II config file incorrect (does not contain "HDD1FILE=" string)',
-    hdiPath: 'Game HDI path is incorrect or unset'
-};
 
 const gameSettings = computed(() => {
     return store.getters.gameSettings(props.gameName);
@@ -116,7 +142,7 @@ function onSettingsClosed() {
 async function launchGame(isCustomExe: boolean, type?: GameLaunchProfile | CustomExeLaunchProfile) {
     const error = await runGame(props.gameName, store, isCustomExe, type);
     if (error) {
-        runGameError.value = pc98runErrors[error] || error;
+        runGameError.value = te(error) ? t(error) : error;
         runGameErrorVisible.value = true;
     }
 }

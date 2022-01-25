@@ -2,18 +2,18 @@
 
 import { app, protocol, BrowserWindow, BrowserView, Tray, Menu, MenuItem, nativeImage } from 'electron';
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib';
-import installExtension, { VUEJS3_DEVTOOLS } from 'electron-devtools-installer';
 import { ipcMain, dialog, shell } from 'electron';
 import { promises as fs, existsSync, createWriteStream } from 'fs';
 import path from 'path';
-import { categoryNames, CustomExeLaunchProfile, customExeLaunchProfiles, CustomGameCategory, GameLaunchProfile, gameLaunchProfiles, GameName, gameNames, GameSettings, LoadRemoteThcrapPatchParams, NamedPath, RunCustomGameParams, RunExeParams, RunGameParams, RunPC98GameParams, RunWindowsGameParams, ThcrapConfig, ThcrapPatchResponse, ThcrapRepository } from './data-types';
+import { categoryNames, CustomExeLaunchProfile, customExeLaunchProfiles, CustomGameCategory, GameLaunchProfile, gameLaunchProfiles, GameName, gameNames, GameSettings, LoadRemoteThcrapPatchParams, NamedPath, RunCustomGameParams, RunExeParams, RunGameParams, RunPC98GameParams, RunWindowsGameParams, SupportedLang, ThcrapConfig, ThcrapPatchResponse, ThcrapRepository } from './data-types';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import axios from 'axios';
-import { MainProcessFunctions, MainProcessHandler, MainProcessHandlers } from './background-functions';
+import { MainProcessFunctions, MainProcessHandlers } from './main-process-functions';
 import { ReadStream } from 'original-fs';
 import { categories, categoryTitles, gameTitles, thcrapGameNames } from './constants';
 import { RendererProcessFunctions } from './renderer-functions';
+import { mainProcessTranslations } from './main-process-translations';
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 type ReturnTypeAsync<T> = T extends (...args: any) => Promise<infer R> ? R : any;
@@ -25,6 +25,7 @@ protocol.registerSchemesAsPrivileged([
 ])
 let mainWindow: BrowserWindow;
 let appIcon: Tray;
+let lang: SupportedLang = 'en';
 
 function sendToRenderer<K extends keyof RendererProcessFunctions>(channel: K, ...args: Parameters<RendererProcessFunctions[K]>) {
     mainWindow.webContents.send(channel, ...args);
@@ -325,7 +326,13 @@ function addIpcListeners() {
                 if (checkExists(gamePath)) {
                     const fileName = gameName == 'mof' ? findFreeReplayFileNameForTH10(gamePath) || path.basename(url) : path.basename(url);
                     const filePath = path.resolve(gamePath, 'replay', fileName);
-                    const clickedButton = dialog.showMessageBoxSync(mainWindow, { message: `Download ${path.basename(url)} to ${filePath}?`, buttons: ['OK', 'Cancel', 'Save as...'], type: 'question' });
+                    const clickedButton = dialog.showMessageBoxSync(mainWindow, { 
+                        message: mainProcessTranslations['downloadPatch'][lang]
+                            .replace('%url%', path.basename(url))
+                            .replace('%path%', filePath),
+                        buttons: ['OK', mainProcessTranslations['cancel'][lang], mainProcessTranslations['saveAs'][lang]],
+                        type: 'question'
+                    });
                     if (clickedButton === 0) {
                         await downloadToFile(url, filePath);
                     } else if (clickedButton === 2) {
@@ -382,6 +389,9 @@ function addIpcListeners() {
         'show-in-taskbar': async (_) => {
             mainWindow.setSkipTaskbar(false);
         },
+        'set-lang': async (_, langToSet) => {
+            lang = langToSet;
+        }
     };
     for (const channel in ipcListeners) {
         if (isMainProcessFunctionName(channel, ipcListeners)) {
@@ -700,8 +710,8 @@ function buildGamesSubMenu(menuTemplate: (Electron.MenuItem | Electron.MenuItemC
     const categoryGames = games.filter(gn => categories[categoryName].includes(gn));
     if (categoryGames.length) {
         menuTemplate.push({
-            label: categoryTitles[categoryName],
-            type: 'submenu', 
+            label: categoryTitles[categoryName][lang],
+            type: 'submenu',
             submenu: categoryGames.map(mg => ({
                 label: gameTitles[mg], 
                 type: 'normal',
@@ -750,12 +760,12 @@ async function createTray(games: GameName[], customGames: CustomGameCategory) {
         }
         const customGamesSubmenu = await buildCustomGamesMenuItem(customGames);
         if (customGamesSubmenu) {
-            customGamesSubmenu.label = 'Custom Games';
+            customGamesSubmenu.label = mainProcessTranslations['customGames'][lang];
             menuTemplate.push(customGamesSubmenu);
         }
         const persistentItems: (Electron.MenuItem | Electron.MenuItemConstructorOptions)[] = [
             {
-                label: 'Random',
+                label: mainProcessTranslations['random'][lang],
                 type: 'normal',
                 click: () => sendToRenderer('run-random-game')
             },
@@ -763,12 +773,12 @@ async function createTray(games: GameName[], customGames: CustomGameCategory) {
                 type: 'separator'
             },
             {
-                label: 'Open',
+                label: mainProcessTranslations['open'][lang],
                 type: 'normal',
                 click: restoreMainWindow
             },
             {
-                label: 'Exit',
+                label: mainProcessTranslations['exit'][lang],
                 type: 'normal',
                 click: () => mainWindow.close()
             }
@@ -785,6 +795,7 @@ function hideTray() {
     if (appIcon && !appIcon.isDestroyed()) {
         appIcon.destroy();
     }
+
 }
 function restoreMainWindow() {
     mainWindow.restore();

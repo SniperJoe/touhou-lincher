@@ -49,7 +49,8 @@ export const store: Store = createStore<State>({
             namedPaths: defaultNamedPaths,
             commandBefore: '',
             commandAfter: '',
-            customGames: defaultCustomGameRootCategory
+            customGames: defaultCustomGameRootCategory,
+            language: 'en'
         };
     },
     mutations,

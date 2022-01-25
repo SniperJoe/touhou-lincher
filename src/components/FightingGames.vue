@@ -1,5 +1,16 @@
+<i18n lang="json">
+{
+    "en": {
+        "fightingGames": "Fighting Games"
+    },
+    "ru": {
+        "fightingGames": "Файтинги"
+    }
+}
+</i18n>
+
 <template>
-    <QItemLabel header>Fighting Games</QItemLabel>
+    <QItemLabel header>{{ t('fightingGames') }}</QItemLabel>
     <div class="games">
         <Game game-name="iamp" :name-color="1"><QImg src="../assets/iamp.png"></QImg></Game>
         <Game game-name="swr" :name-color="1"><QImg src="../assets/swr.png"></QImg></Game>
@@ -8,11 +19,12 @@
         <Game game-name="ulil" :name-color="1"><QImg src="../assets/ulil.png"></QImg></Game>
         <Game game-name="aocf" :name-color="1"><QImg src="../assets/aocf.png"></QImg></Game>
     </div>
-
 </template>
 
 <script lang="ts" setup>
 import Game from './Game.vue';
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 </script>
 

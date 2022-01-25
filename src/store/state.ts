@@ -1,4 +1,4 @@
-import { GameName, ThcrapConfig, GameSettings, NamedPaths, CustomGameCategory as CustomGameRootCategory } from "@/data-types";
+import { GameName, ThcrapConfig, GameSettings, NamedPaths, CustomGameCategory as CustomGameRootCategory, SupportedLang } from "@/data-types";
 
 export default interface State {
     gamesSettings: Record<GameName, GameSettings>,
@@ -16,5 +16,6 @@ export default interface State {
     namedPaths: NamedPaths;
     commandBefore: string;
     commandAfter: string;
-    customGames: CustomGameRootCategory
+    customGames: CustomGameRootCategory,
+    language: SupportedLang
 }

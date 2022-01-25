@@ -1,5 +1,5 @@
 import { ipcRenderer } from 'electron';
-import { MainProcessFunctions } from './background-functions';
+import { MainProcessFunctions } from './main-process-functions';
 import { RendererProcessFunctions } from './renderer-functions';
 export {};
 

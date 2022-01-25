@@ -1,10 +1,28 @@
+<i18n lang="json">
+{
+    "en": {
+        "games": "Games",
+        "customGames": "Custom Games",
+        "replays": "Replays",
+        "settings": "Settings",
+        "info": "Info"
+    },
+    "ru": {
+        "games": "Игры",
+        "customGames": "Свои игры",
+        "replays": "Повторы",
+        "settings": "Настройки",
+        "info": "Информация"
+    }
+}
+</i18n>
 <template>
     <QTabs v-model="tabSelected" no-caps inline-label align="left" class="bg-white text-black shadow-2 main-menu">
-        <QTab name="games" icon="games" label="Games"></QTab>
-        <QTab name="customGames" icon="dashboard_customize" label="Custom Games"></QTab>
-        <QTab name="replays" icon="movie" label="Replays"></QTab>
-        <QTab name="settings" icon="settings" label="Settings"></QTab>
-        <QTab name="info" icon="info" label="Info"></QTab>
+        <QTab name="games" icon="games" :label="t('games')"></QTab>
+        <QTab name="customGames" icon="dashboard_customize" :label="t('customGames')"></QTab>
+        <QTab name="replays" icon="movie" :label="t('replays')"></QTab>
+        <QTab name="settings" icon="settings" :label="t('settings')"></QTab>
+        <QTab name="info" icon="info" :label="t('info')"></QTab>
     </QTabs>
     <QTabPanels v-model="tabSelected">
           <QTabPanel name="games">
@@ -28,6 +46,8 @@ import GlobalSettings from './components/GlobalSettings.vue';
 import { ref, watch } from 'vue';
 import CustomGames from './components/CustomGames.vue';
 import Replays from './components/Replays.vue';
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const tabSelected = ref('games');
 watch(() => tabSelected.value, () => {

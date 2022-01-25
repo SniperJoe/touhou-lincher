@@ -1,4 +1,4 @@
-import { GameName, ThcrapProfileData } from './data-types';
+import { GameName, SupportedLang, ThcrapProfileData } from './data-types';
 
 export const thcrapGameNames: {[gameName in GameName] : string} = {
     hrtp: 'th01',
@@ -103,8 +103,20 @@ export const categories: Record<'mainGames' | 'fightingGames' | 'otherGames', Ga
     fightingGames: ['iamp', 'swr', 'soku', 'hm', 'ulil', 'aocf'],
     otherGames: ['stb', 'ds', 'gfw', 'isc', 'vd']
 };
-export const categoryTitles: Record<string, string> = {
-    mainGames: 'Main Games',
-    fightingGames: 'Fighting Games',
-    otherGames: 'Other Games'
+export const categoryTitles: Record<keyof typeof categories, Record<SupportedLang, string>> = {
+    mainGames: {
+        en: 'Main Games',
+        ru: 'Основные игры',
+        jp: ''
+    },
+    fightingGames: {
+        en: 'Fighting Games',
+        ru: 'Файтинги',
+        jp: ''
+    },
+    otherGames: {
+        en: 'Other Games',
+        ru: 'Другие игры',
+        jp: ''
+    }
 };

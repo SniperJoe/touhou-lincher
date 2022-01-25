@@ -1,14 +1,52 @@
+<i18n lang="json">
+{
+    "en": {
+        "addCategory": "Add Category",
+        "addGame": "Add Game",
+        "noCategories": "No categories created.",
+        "view": "View",
+        "list": "List",
+        "details": "Details",
+        "largeIcons": "Large icons",
+        "smallIcons": "Small icons",
+        "tile": "Tile",
+        "sort": "Sort",
+        "ascending": "Ascending",
+        "descending": "Descending",
+        "random": "Run random game",
+        "game": "Game",
+        "path": "Path"
+    },
+    "ru": {
+        "addCategory": "Добавить категорию",
+        "addGame": "Добавить игру",
+        "noCategories": "Ни одной категории не создано.",
+        "view": "Вид",
+        "list": "Список",
+        "details": "Подробности",
+        "largeIcons": "Крупные иконки",
+        "smallIcons": "Мелкие иконки",
+        "tile": "Плитка",
+        "sort": "Сортировка",
+        "ascending": "По возрастанию",
+        "descending": "По убыванию",
+        "random": "Запустить случайную игру",
+        "game": "Игра",
+        "path": "Путь"
+    }
+}
+</i18n>
 <template>
     <QSplitter v-model="splitterModel">
         <template v-slot:before>
-            <QTree :nodes="treeNodes" :nodeKey="'id'" :childrenKey="'children'" v-model:selected="selected" ref="tree" no-nodes-label="No categories created.">
+            <QTree :nodes="treeNodes" :nodeKey="'id'" :childrenKey="'children'" v-model:selected="selected" ref="tree" :no-nodes-label="t('noCategories')">
                 <template v-slot:default-header="props">
                     <CustomGameCategoryHeader :id="props.node.id" :modelValue="props.node.name" :selected="selected == props.node.id"></CustomGameCategoryHeader>
                 </template>
             </QTree>
             <div class="row justify-between">
-                <QBtn class="q-mt-md q-mb-md q-ml-sm" @click="addCategory">Add Category</QBtn>
-                <QBtn v-if="canAddGame" class="q-mt-md q-mb-md q-mr-sm" @click="addGame">Add Game</QBtn>
+                <QBtn class="q-mt-md q-mb-md q-ml-sm" @click="addCategory">{{ t('addCategory') }}</QBtn>
+                <QBtn v-if="canAddGame" class="q-mt-md q-mb-md q-mr-sm" @click="addGame">{{ t('addGame') }}</QBtn>
             </div>
         </template>
         <template v-slot:after>
@@ -30,13 +68,13 @@
                     >
                         <template v-slot:body-cell-game="props">
                             <QTd key="name" :props="props" style="width: fit-content;">
-                                <CustomGame :index="props.row.index" :game="props.row" :parentId="selected || 0" :view-type="viewType"></CustomGame>
+                                <CustomGame :index="props.row.index" :game="toCustomGame(props.row)" :parentId="selected || 0" :view-type="viewType"></CustomGame>
                             </QTd>
                         </template>
                 </QTable>
                 <QMenu context-menu touch-position>
                     <QItem clickable>
-                        <QItemSection>View</QItemSection>
+                        <QItemSection>{{ t('view') }}</QItemSection>
                         <QItemSection side>
                             <QIcon name="keyboard_arrow_right"></QIcon>
                         </QItemSection>
@@ -44,34 +82,34 @@
                             <QList>
                                 <QItem>
                                     <QItemSection>
-                                        <QCheckbox :modelValue="viewType == 'list'" @update:modelValue="viewType = 'list'" label="List"></QCheckbox>
+                                        <QCheckbox :modelValue="viewType == 'list'" @update:modelValue="viewType = 'list'" :label="t('list')"></QCheckbox>
                                     </QItemSection>
                                 </QItem>
                                 <QItem>
                                     <QItemSection>
-                                        <QCheckbox :modelValue="viewType == 'details'" @update:modelValue="viewType = 'details'" label="Details"></QCheckbox>
+                                        <QCheckbox :modelValue="viewType == 'details'" @update:modelValue="viewType = 'details'" :label="t('details')"></QCheckbox>
                                     </QItemSection>
                                 </QItem>
                                 <QItem>
                                     <QItemSection>
-                                        <QCheckbox :modelValue="viewType == 'large-icons'" @update:modelValue="viewType = 'large-icons'" label="Large icons"></QCheckbox>
+                                        <QCheckbox :modelValue="viewType == 'large-icons'" @update:modelValue="viewType = 'large-icons'" :label="t('largeIcons')"></QCheckbox>
                                     </QItemSection>
                                 </QItem>
                                 <QItem>
                                     <QItemSection>
-                                        <QCheckbox :modelValue="viewType == 'small-icons'" @update:modelValue="viewType = 'small-icons'" label="Small icons"></QCheckbox>
+                                        <QCheckbox :modelValue="viewType == 'small-icons'" @update:modelValue="viewType = 'small-icons'" :label="t('smallIcons')"></QCheckbox>
                                     </QItemSection>
                                 </QItem>
                                 <QItem>
                                     <QItemSection>
-                                        <QCheckbox :modelValue="viewType == 'tile'" @update:modelValue="viewType = 'tile'" label="Tile"></QCheckbox>
+                                        <QCheckbox :modelValue="viewType == 'tile'" @update:modelValue="viewType = 'tile'" :label="t('tile')"></QCheckbox>
                                     </QItemSection>
                                 </QItem>
                             </QList>
                         </QMenu>
                     </QItem>
                     <QItem clickable>
-                        <QItemSection>Sort</QItemSection>
+                        <QItemSection>{{ t('sort') }}</QItemSection>
                         <QItemSection side>
                             <QIcon name="keyboard_arrow_right"></QIcon>
                         </QItemSection>
@@ -79,12 +117,12 @@
                             <QList>
                                 <QItem>
                                     <QItemSection>
-                                        <QCheckbox :modelValue="order == 'asc'" @update:modelValue="order = 'asc'" label="Ascending"></QCheckbox>
+                                        <QCheckbox :modelValue="order == 'asc'" @update:modelValue="order = 'asc'" :label="t('ascending')"></QCheckbox>
                                     </QItemSection>
                                 </QItem>
                                 <QItem>
                                     <QItemSection>
-                                        <QCheckbox :modelValue="order == 'desc'" @update:modelValue="order = 'desc'" label="Descending"></QCheckbox>
+                                        <QCheckbox :modelValue="order == 'desc'" @update:modelValue="order = 'desc'" :label="t('descending')"></QCheckbox>
                                     </QItemSection>
                                 </QItem>
                             </QList>
@@ -92,7 +130,7 @@
                     </QItem>
                 </QMenu>
             </div>
-            <QBtn class="q-ma-md" @click="runRandom" v-if="!!games.length">Run random game</QBtn>
+            <QBtn class="q-ma-md" @click="runRandom" v-if="!!games.length">{{ t('random') }}</QBtn>
         </template>
     </QSplitter>
 </template>
@@ -100,12 +138,14 @@
 <script lang="ts" setup>
 import { store } from '@/store';
 import { ActionTypes } from '@/store/actions';
-import type { QTableProps, QTree } from 'quasar';
+import type { LooseDictionary, QTableProps, QTree } from 'quasar';
 import { computed, ComputedRef, Ref, ref } from 'vue';
 import CustomGameCategoryHeader from './CustomGameCategoryHeader.vue';
 import CustomGame from './CustomGame.vue';
 import { CustomGame as CustomGameType, CustomGamesViewType } from '../data-types';
 import { runCustomGame } from '@/utils';
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 const splitterModel = ref(50);
 const selected : Ref<number | null> = ref(null);
@@ -117,11 +157,11 @@ const order: Ref<'asc' | 'desc'> = ref('asc');
 
 const games : ComputedRef<Array<CustomGameType & {index: number}>> = computed(() => selected.value ? store.getters.customGamesOfCategory(selected.value).map((item, index) => ({ ...item, index })) : []);
 const viewType: Ref<CustomGamesViewType> = ref('list');
-const tableColumns: QTableProps['columns'] = [
+const tableColumns: ComputedRef<QTableProps['columns']> = computed(() => [
     {
         name: 'game',
         required: true,
-        label: 'Game',
+        label: t('game'),
         align: 'left',
         field: 'index',
         sortable: true
@@ -129,11 +169,11 @@ const tableColumns: QTableProps['columns'] = [
     {
         name: 'path',
         align: 'right',
-        label: 'Path',
+        label: t('path'),
         field: 'path',
         sortable: true
     }
-];
+]);
 async function addCategory() {
     await store.dispatch(ActionTypes.ADD_CUSTOM_GAMES_CATEGORY, selected.value);
     if (selected.value) {
@@ -157,6 +197,9 @@ async function addGame() {
             });
         }
     }
+}
+function toCustomGame(row: LooseDictionary): CustomGameType {
+    return row as CustomGameType;
 }
 function getExeName(path: string) : string {
     const nameMatch = path.match(/[/\\]([^/\\]+)$/);

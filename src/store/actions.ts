@@ -1,7 +1,7 @@
 import { ActionContext, ActionTree } from 'vuex';
 import State from './state';
 import { TMutations, MutationTypes } from './mutations';
-import { CustomGame, GameName, gameNames, GameSettings, NamedPath, NamedPathType, namedPathTypes, ThcrapConfig } from '@/data-types';
+import { CustomGame, GameName, gameNames, GameSettings, NamedPath, NamedPathType, namedPathTypes, SupportedLang, ThcrapConfig } from '@/data-types';
 import { defaultThcrapConfig, defaultThcrapStartingRepository } from './defaults';
 import { thcrapGameNames } from '@/constants';
 import { isGameConfigured } from '@/utils';
@@ -33,7 +33,8 @@ export enum ActionTypes {
     DELETE_CUSTOM_GAMES_CATEGORY = '24',
     EDIT_CUSTOM_GAME = '25',
     DELETE_CUSTOM_GAME = '26',
-    UPSERT_TRAY_CONTEXT_MENU = '27'
+    UPSERT_TRAY_CONTEXT_MENU = '27',
+    SET_LANG = '28'
 }
 
 type AugmentedActionContext = {
@@ -71,6 +72,7 @@ export interface IActions {
     [ActionTypes.EDIT_CUSTOM_GAME]({ commit, dispatch }: AugmentedActionContext, payload: {parentId: number, game: CustomGame; index: number}): Promise<void>;
     [ActionTypes.DELETE_CUSTOM_GAME]({ commit, dispatch }: AugmentedActionContext, payload: {parentId: number, index: number}): Promise<void>;
     [ActionTypes.UPSERT_TRAY_CONTEXT_MENU]({ state }: AugmentedActionContext): Promise<void>;
+    [ActionTypes.SET_LANG]({ commit, dispatch }: AugmentedActionContext, payload: SupportedLang): Promise<void>;
 }
 type ActionsInterfaceCorrect = IActions extends {[K in `${ActionTypes}`]: (context: AugmentedActionContext, payload: any) => Promise<void> | void } ? true : false; // eslint-disable-line @typescript-eslint/no-explicit-any
 type Actions = ActionsInterfaceCorrect extends true ? IActions : null;
@@ -123,6 +125,10 @@ export const actions: ActionTree<State, State> & Actions = {
         }
         if (settings.customGames) {
             commit(MutationTypes.SET_CUSTOM_GAMES, settings.customGames);
+        }
+        if (settings.language) {
+            commit(MutationTypes.SET_LANG, settings.language);
+            await invokeInMain('set-lang', settings.language);
         }
         if (settings.showTrayIcon) {
             await dispatch(ActionTypes.UPSERT_TRAY_CONTEXT_MENU);
@@ -303,5 +309,13 @@ export const actions: ActionTree<State, State> & Actions = {
         const configuredGames: GameName[] = gameNames.filter(gn => isGameConfigured(gn, state.gamesSettings[gn], state.nekoProjectPathValid, state.thcrapFound));
         await invokeInMain('set-tray-menu', configuredGames, JSON.stringify(state.customGames));
         // console.log('creating tray: ', configuredGames, state.customGames);
+    },
+    async [ActionTypes.SET_LANG]({ commit, dispatch, state }: AugmentedActionContext, payload: SupportedLang) {
+        commit(MutationTypes.SET_LANG, payload);
+        await dispatch(ActionTypes.SAVE_SETTINGS);
+        await invokeInMain('set-lang', payload);
+        if (state.showTrayIcon) {
+            await dispatch(ActionTypes.UPSERT_TRAY_CONTEXT_MENU);
+        }
     }
 };

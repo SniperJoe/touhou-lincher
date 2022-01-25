@@ -1,11 +1,57 @@
+<i18n lang="json">
+{
+    "en": {
+        "wineSettings": "Wine settings",
+        "addBtnLabels": {
+            "wineExec": "Add Wine executable",
+            "winePrefix": "Add Wine prefix"
+        },
+        "deleteSelected": "Delete selected",
+        "tableTitles": {
+            "wineExec": "Wine executables",
+            "winePrefix": "Wine Prefixes"
+        },
+        "defaultNamedPathLabels": {
+            "wineExec": "Default Wine executable",
+            "winePrefix": "Default Wine prefix"
+        },
+        "commandsSettings": "Commands settings",
+        "commandBefore": "Command to execute before every game launch",
+        "commandAfter": "Command to execute after every game launch",
+        "name": "Name",
+        "path": "Path"
+    },
+    "ru": {
+        "wineSettings": "Настройки Wine",
+        "addBtnLabels": {
+            "wineExec": "Добавить Wine",
+            "winePrefix": "Добавить префикс Wine"
+        },
+        "deleteSelected": "Удалить выбранные",
+        "tableTitles": {
+            "wineExec": "Исполняемые файлы Wine",
+            "winePrefix": "Префиксы Wine"
+        },
+        "defaultNamedPathLabels": {
+            "wineExec": "Wine по умолчанию",
+            "winePrefix": "Префикс Wine по умолчанию"
+        },
+        "commandsSettings": "Настройки команд",
+        "commandBefore": "Команда перед запуском игр",
+        "commandAfter": "Команда после выхода из игр",
+        "name": "Имя",
+        "path": "Путь"
+    }
+}
+</i18n>
 <template>
     <QList bordered class="rounded-borders q-pa-md q-ma-md">
         <QItem>
-            <div class="text-h6">Linux settings</div>
+            <div class="text-h6">{{ t('wineSettings') }}</div>
         </QItem>
         <div v-for="(namedPathType, index) in namedPathTypes" :key="index">
             <QTable
-                :title="tableTitles[namedPathType]"
+                :title="t(`tableTitles.${namedPathType}`)"
                 :columns="tablesColumns"
                 :rows="tablesRows[namedPathType].value"
                 row-key="name"
@@ -26,49 +72,41 @@
                 </template>
             </QTable>
             <div class="row justify-end q-mt-md">
-                <QBtn @click="deleteSelectedNamedPaths(namedPathType)">Delete selected</QBtn>
+                <QBtn @click="deleteSelectedNamedPaths(namedPathType)">{{ t('deleteSelected') }}</QBtn>
                 <QSpace></QSpace>
-                <QBtn @click="pickNamedPath(namedPathType)">{{addBtnLabels[namedPathType]}}</QBtn>
+                <QBtn @click="pickNamedPath(namedPathType)">{{ t(`addBtnLabels.${namedPathType}`) }}</QBtn>
             </div>
-            <QItemLabel header>{{defaultNamedPathLabels[namedPathType]}}</QItemLabel>
+            <QItemLabel header>{{ t(`defaultNamedPathLabels.${namedPathType}`) }}</QItemLabel>
             <div class="q-pl-md q-pr-md q-mb-md">
                 <QSelect v-model="defaultNamedPath[namedPathType]" :options="defaultOptions[namedPathType].value" dense emit-value map-options option-label="name" option-value="id"></QSelect>
             </div>
         </div>
+    </QList>
+    <QList bordered class="rounded-borders q-pa-md q-ma-md">
         <QItem>
-            <QItemSection><div class="text-h6">Commands settings</div></QItemSection>
+            <QItemSection><div class="text-h6">{{ t('commandsSettings') }}</div></QItemSection>
         </QItem>
-        <PostponedInput v-model="commandBefore" label="Command to execute before every game launch" class="q-ma-md q-mb-lg"></PostponedInput>
-        <PostponedInput v-model="commandAfter" label="Command to execute after every game launch" class="q-ma-md" ></PostponedInput>
+        <PostponedInput v-model="commandBefore" :label="t('commandBefore')" class="q-ma-md q-mb-lg"></PostponedInput>
+        <PostponedInput v-model="commandAfter" :label="t('commandAfter')" class="q-ma-md" ></PostponedInput>
     </QList>
 </template>
 
 <script lang="ts" setup>
-import type { QInput, QTableProps } from 'quasar';
+import type { QTableProps } from 'quasar';
 import { ActionTypes } from '@/store/actions';
 import { NamedPath, NamedPathType, namedPathTypes } from '@/data-types';
 import { reactive, computed, ComputedRef } from 'vue';
 import { store } from '../store';
 import type { UnwrapNestedRefs } from '@vue/reactivity';
 import PostponedInput from './PostponedInput.vue';
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
-const tableTitles: Record<NamedPathType, string> = {
-    wineExec: 'Wine executables',
-    winePrefix: 'Wine Prefixes'
-};
-const addBtnLabels: Record<NamedPathType, string> = {
-    wineExec: 'Add Wine executable',
-    winePrefix: 'Add Wine prefix'
-};
-const defaultNamedPathLabels: Record<NamedPathType, string> = {
-    wineExec: 'Default Wine executable',
-    winePrefix: 'Default Wine prefix'
-};
-const tablesColumns: QTableProps['columns'] = [
+const tablesColumns: ComputedRef<QTableProps['columns']> = computed(() => [
     {
         name: 'name',
         required: true,
-        label: 'Name',
+        label: t('name'),
         align: 'left',
         field: 'name',
         sortable: true
@@ -76,11 +114,11 @@ const tablesColumns: QTableProps['columns'] = [
     {
         name: 'path',
         align: 'right',
-        label: 'Path',
+        label: t('path'),
         field: 'path',
         sortable: true
     }
-];
+]);
 const tablesRows: Record<NamedPathType, ComputedRef<NamedPath[]>> = namedPathTypes.reduce((acc: Record<NamedPathType, ComputedRef<NamedPath[]>>, npt: NamedPathType) => {
     acc[npt] = computed(() => store.getters.namedPaths(npt));
     return acc;
