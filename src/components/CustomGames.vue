@@ -221,7 +221,9 @@ function getExeName(path: string) : string {
 async function runRandom() {
     const index = Math.floor(Math.random() * games.value.length);
     const game = games.value[index];
-    await runCustomGame(game, store, false);
+    if (game) {
+        await runCustomGame(game, store, false);
+    }
 }
 </script>
 

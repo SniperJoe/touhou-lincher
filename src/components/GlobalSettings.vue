@@ -47,8 +47,8 @@
         "selectNone": "なし",
         "language": "語",
         "alwaysShowTrayIcon": "トレイアイコンを常に表示する",
-        "randomGames": "不特定着手に含まれるゲーム",
-        "randomGameSettings": "不特定着手の構成"
+        "randomGames": "漫然着手に含まれるゲーム",
+        "randomGameSettings": "漫然着手の構成"
     }
 }
 </i18n>

@@ -99,5 +99,7 @@ export async function runGame(game: GameName, store: Store, isCustomExe: boolean
 export async function runRandomGame(store: Store) : Promise<void> {
     const configuredGames = gameNames.filter(gn => isGameConfigured(gn, store.getters.gameSettings(gn), store.getters.nekoProjectPathValid, store.getters.thcrapFound));
     const index = Math.floor(Math.random() * (configuredGames.length - 0.001));
-    await runGame(configuredGames[index], store, false);
+    if (configuredGames[index]) {
+        await runGame(configuredGames[index], store, false);
+    }
 }
