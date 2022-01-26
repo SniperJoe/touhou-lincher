@@ -14,7 +14,8 @@ import { categories, categoryTitles, gameTitles, thcrapGameNames } from './const
 import { RendererProcessFunctions } from './renderer-functions';
 import { mainProcessTranslations } from './main-process-translations';
 
-const isDevelopment = process.env.NODE_ENV !== 'production'
+const isDevelopment = process.env.NODE_ENV !== 'production';
+const __public = isDevelopment ? 'public/' : __dirname;
 type ReturnTypeAsync<T> = T extends (...args: any) => Promise<infer R> ? R : any;
 type a = ReturnTypeAsync<typeof dialog.showOpenDialog>;
 
@@ -742,7 +743,7 @@ function buildGamesSubMenu(menuTemplate: (Electron.MenuItem | Electron.MenuItemC
                 label: gameTitles[lang][mg], 
                 type: 'normal',
                 click: () => sendToRenderer('run-game', mg),
-                icon: assureExists(`public/tray-imgs/Icon_${thcrapGameNames[mg]}.png`)
+                icon: assureExists(path.resolve(__public, 'tray-imgs', `Icon_${thcrapGameNames[mg]}.png`))
             }))
         });
     }
@@ -777,7 +778,7 @@ async function buildCustomGamesMenuItem(customGamesCategory: CustomGameCategory)
 async function createTray(games: GameName[], customGames: CustomGameCategory) {
     try {
         if (!appIcon || appIcon.isDestroyed()) {
-            appIcon = new Tray('public/favicon-2.png');
+            appIcon = new Tray(path.resolve(__public, 'favicon-48x48.png'));
             appIcon.on('double-click', restoreMainWindow);
         }
         const menuTemplate: (Electron.MenuItem | Electron.MenuItemConstructorOptions)[] = [];
@@ -853,19 +854,20 @@ async function createWindow() {
             preload: path.join(__dirname, 'preload.js'),
             
         },
-        icon: 'public/favicon-2.png',
+        icon: path.resolve(__public, 'favicon-48x48.png'),
     });
     mainWindow.on('minimize', (event: Electron.Event) => {
         // console.log('window minmized');
         sendToRenderer('minimized');
     });
+    mainWindow.menuBarVisible = false;
+
     if (process.env.WEBPACK_DEV_SERVER_URL) {
         // Load the url of the dev server if in development mode
         await mainWindow.loadURL(process.env.WEBPACK_DEV_SERVER_URL)
         if (!process.env.IS_TEST) mainWindow.webContents.openDevTools()
     } else {
         createProtocol('app');
-        mainWindow.menuBarVisible = false;
         // Load the index.html when not in development
         mainWindow.loadURL('app://./index.html');
     }
