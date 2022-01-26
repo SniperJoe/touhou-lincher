@@ -41,6 +41,14 @@
         "commandAfter": "Команда после выхода из игр",
         "name": "Имя",
         "path": "Путь"
+    },
+    "jp": {
+        "wineSettings": "ワインの構成",
+        "tableTitles": {
+            "wineExec": "ワインの実行ファイル"
+        },
+        "name": "名前",
+        "path": "道"
     }
 }
 </i18n>
