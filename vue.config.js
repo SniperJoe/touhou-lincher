@@ -8,7 +8,14 @@ module.exports = {
             preload: 'src/preload.ts',
             rendererProcessFile: 'src/renderer.ts',
             mainProcessFile: 'src/main-process.ts',
-            mainProcessWatch: ['src/main-process-functions.ts', 'src/data-types.ts', 'src/constants.ts', 'src/renderer-functions.ts']
+            mainProcessWatch: ['src/main-process-functions.ts', 'src/data-types.ts', 'src/constants.ts', 'src/renderer-functions.ts'],
+            builderOptions: {
+                linux: {
+                    target: 'deb',
+                    category: 'Game',
+                    icon: 'public/favicon256x256.png'
+                }
+            }
         }
     },
     transpileDependencies: [

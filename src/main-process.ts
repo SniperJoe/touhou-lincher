@@ -25,6 +25,7 @@ protocol.registerSchemesAsPrivileged([
 let mainWindow: BrowserWindow;
 let appIcon: Tray;
 let lang: SupportedLang = 'en';
+let settingsPath = '';
 
 function sendToRenderer<K extends keyof RendererProcessFunctions>(channel: K, ...args: Parameters<RendererProcessFunctions[K]>) {
     mainWindow.webContents.send(channel, ...args);
@@ -88,7 +89,7 @@ function addIpcListeners() {
     const ipcListeners: MainProcessHandlers = {
         'get-settings':  async () => {
             try {
-                return await fs.readFile('settings.json', { encoding: 'utf-8' });
+                return await fs.readFile(settingsPath, { encoding: 'utf-8' });
             }
             catch {
                 console.log('No settings found, using {}');
@@ -99,7 +100,7 @@ function addIpcListeners() {
             return await readThcrapConfig(thcrapPath);
         },
         'set-settings':  async (event, settings: string) => {
-            await fs.writeFile('settings.json', settings, {encoding: 'utf-8'});
+            await fs.writeFile(settingsPath, settings, {encoding: 'utf-8'});
         },
         'pick-exe':  async (_, allowLinuxExe) => {
             const config: Electron.OpenDialogOptions = { 
@@ -826,8 +827,19 @@ function restoreMainWindow() {
     mainWindow.restore();
     sendToRenderer('open');
 }
+async function configSettingsPath() {
+    let settingsDir = await getHomeFolder();
+    if (settingsDir) {
+        settingsDir = path.resolve(settingsDir, '.touhou-lincher');
+        if (!checkExists(settingsDir)) {
+            await fs.mkdir(settingsDir);
+        }
+        settingsPath = path.resolve(settingsDir, 'settings.json');
+    } else {
+        settingsPath = 'settings.json'
+    }
+}
 async function createWindow() {
-    addIpcListeners();
     // Create the browser window.
     mainWindow = new BrowserWindow({
         width: 940,
@@ -841,7 +853,7 @@ async function createWindow() {
             preload: path.join(__dirname, 'preload.js'),
             
         },
-        icon: 'public/favicon-2.png'
+        icon: 'public/favicon-2.png',
     });
     mainWindow.on('minimize', (event: Electron.Event) => {
         // console.log('window minmized');
@@ -852,9 +864,10 @@ async function createWindow() {
         await mainWindow.loadURL(process.env.WEBPACK_DEV_SERVER_URL)
         if (!process.env.IS_TEST) mainWindow.webContents.openDevTools()
     } else {
-        createProtocol('app')
+        createProtocol('app');
+        mainWindow.menuBarVisible = false;
         // Load the index.html when not in development
-        mainWindow.loadURL('app://./index.html')
+        mainWindow.loadURL('app://./index.html');
     }
 }
 
@@ -885,8 +898,10 @@ app.on('ready', async () => {
             console.error('Vue Devtools failed to install:', (e as { toString(): string }).toString())
         }
     }
-    createWindow()
-})
+    await configSettingsPath();
+    addIpcListeners();
+    createWindow();
+});
 
 // Exit cleanly on request from parent process in development mode.
 if (isDevelopment) {
