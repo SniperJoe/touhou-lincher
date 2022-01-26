@@ -1,8 +1,7 @@
 'use strict'
 
-import { app, protocol, BrowserWindow, BrowserView, Tray, Menu, MenuItem, nativeImage } from 'electron';
+import { app, protocol, BrowserWindow, BrowserView, Tray, Menu, MenuItem, nativeImage, ipcMain, dialog, shell } from 'electron';
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib';
-import { ipcMain, dialog, shell } from 'electron';
 import { promises as fs, existsSync, createWriteStream } from 'fs';
 import path from 'path';
 import { categoryNames, CustomExeLaunchProfile, customExeLaunchProfiles, CustomGameCategory, GameLaunchProfile, gameLaunchProfiles, GameName, gameNames, GameSettings, LoadRemoteThcrapPatchParams, NamedPath, RunCustomGameParams, RunExeParams, RunGameParams, RunPC98GameParams, RunWindowsGameParams, SupportedLang, ThcrapConfig, ThcrapPatchResponse, ThcrapRepository } from './data-types';
@@ -398,7 +397,10 @@ function addIpcListeners() {
         },
         'set-lang': async (_, langToSet) => {
             lang = langToSet;
-        }
+        },
+        'open-link': async (_, link) => {
+            shell.openExternal(link);
+        },
     };
     for (const channel in ipcListeners) {
         if (isMainProcessFunctionName(channel, ipcListeners)) {

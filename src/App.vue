@@ -44,6 +44,9 @@
           <QTabPanel name="settings">
               <GlobalSettings></GlobalSettings>
           </QTabPanel>
+          <QTabPanel name="info">
+              <Info></Info>
+          </QTabPanel>
     </QTabPanels>
 </template>
 
@@ -54,6 +57,7 @@ import { ref, watch } from 'vue';
 import CustomGames from './components/CustomGames.vue';
 import Replays from './components/Replays.vue';
 import { useI18n } from 'vue-i18n';
+import Info from './components/Info.vue';
 const { t } = useI18n();
 
 const tabSelected = ref('games');
