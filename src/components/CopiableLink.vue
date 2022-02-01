@@ -27,7 +27,7 @@ const { t } = useI18n();
 const props = defineProps<{link: string}>();
 
 async function openLink(e: MouseEvent): Promise<void> {
-    console.log('opening link');
+    invokeInMain('log', 'opening link');
     e.preventDefault();
     await invokeInMain('open-link', props.link);
 }

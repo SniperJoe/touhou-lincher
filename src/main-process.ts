@@ -27,6 +27,19 @@ let mainWindow: BrowserWindow;
 let appIcon: Tray;
 let lang: SupportedLang = 'en';
 let settingsPath = '';
+const debugMode = process.env.DEBUG === 'true'
+
+function LogMain(...args: any[]) {
+    if (debugMode) {
+        console.log(...args);
+    }
+}
+
+function LogRenderer(...args: any[]) {
+    if (debugMode) {
+        console.log('RendererProcess: ', ...args);
+    }
+}
 
 function sendToRenderer<K extends keyof RendererProcessFunctions>(channel: K, ...args: Parameters<RendererProcessFunctions[K]>) {
     mainWindow.webContents.send(channel, ...args);
@@ -93,7 +106,7 @@ function addIpcListeners() {
                 return await fs.readFile(settingsPath, { encoding: 'utf-8' });
             }
             catch {
-                console.log('No settings found, using {}');
+                LogMain('No settings found, using {}');
                 return '{}';
             }
         },
@@ -149,7 +162,7 @@ function addIpcListeners() {
             for (const cmd of params.commandsBefore.filter(c => !!c)) {
                 await TryExecAsync(cmd);
             }
-            console.log(command);
+            LogMain(command);
             await TryExecAsync(command);
             for (const cmd of params.commandsAfter.filter(c => !!c)) {
                 await TryExecAsync(cmd);
@@ -264,7 +277,7 @@ function addIpcListeners() {
                 }
                 catch (e) {
                     if (axios.isAxiosError(e) && e.response) {
-                        console.log(`Request to ${e.response.config.baseURL}${e.response.config.url} failed: ${e.code}`);
+                        LogMain(`Request to ${e.response.config.baseURL}${e.response.config.url} failed: ${e.code}`);
                     }
                     continue;
                 }
@@ -280,7 +293,7 @@ function addIpcListeners() {
             }
             catch (e) {
                 if (axios.isAxiosError(e) && e.response) {
-                    console.log(`Request to ${e.response.config.baseURL}${e.response.config.url} failed: ${e.code}`);
+                    LogMain(`Request to ${e.response.config.baseURL}${e.response.config.url} failed: ${e.code}`);
                 }
             }
             return '';
@@ -321,7 +334,7 @@ function addIpcListeners() {
                 shell.openPath(path.dirname(pathToOpen));
             }
             catch {
-                // console.log(`Failed to open folder "${path.dirname(pathToOpen)}"`);
+                LogMain(`Failed to open folder "${path.dirname(pathToOpen)}"`);
             }
         },
         'open-replays-repository': async (_, url: string, offsetTop: number) => {
@@ -361,10 +374,10 @@ function addIpcListeners() {
             if (driveLetterMatch) {
                 const driveLetter = driveLetterMatch[1].toLowerCase();
                 const windowsPathParts = windowsPath.replace(driveLetterMatch[0], '').split(/[\\/]/);
-                // console.log('parts of windows path: ' + windowsPathParts.join(', '));
+                LogMain('parts of windows path: ' + windowsPathParts.join(', '));
                 for (const prefix of prefixes) {
                     const unixPath = path.resolve(prefix, 'dosdevices', `${driveLetter}:`, ...windowsPathParts);
-                    // console.log('unix path: ' + unixPath);
+                    LogMain('unix path: ' + unixPath);
                     if (checkExists(unixPath)) {
                         const { stdout: dosdevices_lsResult } = await TryExecAsync(`ls -l "${path.resolve(prefix, 'dosdevices', driveLetter + ':')}"`);
                         const drivePathMatch = dosdevices_lsResult.match(/(?<driveLetter>[a-z]): -> '?(?<drivePath>.+)'?\s*$/m);
@@ -372,17 +385,17 @@ function addIpcListeners() {
                             return path.resolve(drivePathMatch.groups.drivePath, ...windowsPathParts);
                         }
                     } else {
-                        // console.log('unix path does not exist');
+                        LogMain('unix path does not exist');
                     }
                 }
             } else {
-                // console.log('drive letter regexp failed for ' + windowsPath);
+                LogMain('drive letter regexp failed for ' + windowsPath);
             }
             return '';
         },
         'edit-vpatch':async (_, gamePath: string) => {
             const vpatchIniPAth = path.resolve(path.dirname(gamePath), 'vpatch.ini');
-            // console.log('vpatch.ini path: ' + vpatchIniPAth);
+            LogMain('vpatch.ini path: ' + vpatchIniPAth);
             await TryExecAsync(`xdg-open "${vpatchIniPAth}"`);
         },
         'set-tray-menu':async (_, games: GameName[], customGames: string) => {
@@ -403,6 +416,9 @@ function addIpcListeners() {
         'open-link': async (_, link) => {
             shell.openExternal(link);
         },
+        'log': async (_, ...args: any) => {
+            LogRenderer(...args);
+        }
     };
     for (const channel in ipcListeners) {
         if (isMainProcessFunctionName(channel, ipcListeners)) {
@@ -415,8 +431,8 @@ function isMainProcessFunctionName(channel: string, ipcListeners: MainProcessHan
 }
 async function loadDataUrlImgFromExe(exePath: string) {
     const output = await TryExecAsync(`wrestool -x -t 14 "${exePath}" | base64`);
-    // console.log('exe img path: ' + path);
-    // console.log('exe img result: ', output);
+    LogMain('exe img path: ' + path);
+    LogMain('exe img result: ', output);
     if (output.stdout) {
         return `data:image/x-icon;base64,${output.stdout}`;
     }
@@ -472,7 +488,7 @@ async function openReplaysRepository(url: string, offsetTop: number) {
         replaysView.webContents.on('will-navigate', (event, url) => {
             if (url.endsWith('.rpy')) {
                 event.preventDefault();
-                console.log('Sending path search request to render process');
+                LogMain('Sending path search request to render process');
                 sendToRenderer('get-replays-path', url);
             }
         })
@@ -481,23 +497,23 @@ async function openReplaysRepository(url: string, offsetTop: number) {
 async function loadLocalThcrapRepos(thcrapPath: string) : Promise<string[]> {
     const reposFolder = path.resolve(path.dirname(thcrapPath), 'repos');
     const repoStrings : string[] = [];
-    //console.log(`checking ${reposFolder} exists:`)
+    LogMain(`checking ${reposFolder} exists:`)
     if (checkExists(reposFolder)) {
-        //console.log(`${reposFolder} exists`)
+        LogMain(`${reposFolder} exists`)
         const reposFolderEntries = await fs.readdir(reposFolder, {withFileTypes: true});
-        //console.log(`${reposFolder} entries: `, reposFolderEntries.map(v => v.name).join(', '));
+        LogMain(`${reposFolder} entries: `, reposFolderEntries.map(v => v.name).join(', '));
         for (const reposFolderEntry of reposFolderEntries) {
             if (reposFolderEntry.isDirectory()) {
                 const reposJsPath = path.resolve(reposFolder, reposFolderEntry.name, 'repo.js');
-                //console.log(`checking ${reposJsPath} exists:`)
+                LogMain(`checking ${reposJsPath} exists:`)
                 if (checkExists(reposJsPath)) {
-                    //console.log(`${reposJsPath} exists, adding to list`);
+                    LogMain(`${reposJsPath} exists, adding to list`);
                     repoStrings.push(await fs.readFile(reposJsPath, {encoding: 'utf-8'}));
                 }
             }
         }
     } else {
-        //console.log(`${reposFolder} does not exist`);
+        LogMain(`${reposFolder} does not exist`);
     }
     return repoStrings;
 }
@@ -606,7 +622,7 @@ async function RunPC98Game(runGameParams: RunPC98GameParams) : Promise<string> {
                 return 'winePrefix';
             }
             const gameWindowsPath = `${driveResult.letter.toUpperCase()}:\\${path.basename(gameSettings.hdiPath)}`;
-            console.log('neko config path: '+nekoConfigPath);
+            LogMain('neko config path: '+nekoConfigPath);
             const writeHdiPathToNekoConfigResult = await writeHdiPathToNekoConfig(nekoConfigPath, gameWindowsPath, 'utf16le');
             if (writeHdiPathToNekoConfigResult) {
                 return writeHdiPathToNekoConfigResult;
@@ -618,7 +634,7 @@ async function RunPC98Game(runGameParams: RunPC98GameParams) : Promise<string> {
             const homeFolder = await getHomeFolder();
             if (homeFolder) {
                 nekoConfigPath = path.resolve(homeFolder, '.config', 'xnp21kai', 'xnp21kairc');
-                console.log('neko config path: '+nekoConfigPath);
+                LogMain('neko config path: '+nekoConfigPath);
                 const writeHdiPathToNekoConfigResult = await writeHdiPathToNekoConfig(nekoConfigPath, gameSettings.hdiPath, 'utf-8');
                 if (writeHdiPathToNekoConfigResult) {
                     return writeHdiPathToNekoConfigResult;
@@ -678,7 +694,7 @@ async function writeHdiPathToNekoConfig(nekoConfigPath: string, gameHdiPath: str
 }
 async function createWineDrive(pathToPoint: string, prefixCommand: string): Promise<{ success: true; letter: string; } | { success: false; }> {
     const prefixPath = tryGetGroup(prefixCommand, /WINEPREFIX="(?<pfx>.+?)"? $/, 'pfx') || await getDefaultWinePrefix();
-    console.log('pathToPoint is '+pathToPoint);
+    LogMain('pathToPoint is '+pathToPoint);
     pathToPoint = pathToPoint.replace(/\/$/, '');
     const dosdevicesPath = path.resolve(prefixPath, 'dosdevices');
     if (checkExists(dosdevicesPath)) {
@@ -695,30 +711,30 @@ async function createWineDrive(pathToPoint: string, prefixCommand: string): Prom
             for (const driveString of driveStrings) {
                 if (driveString.groups) {
                     const drivePath = driveString.groups.drivePath.replace(/^'|\/?'?\s*$/g, '');
-                    console.log('handling path: '+drivePath);
+                    LogMain('handling path: '+drivePath);
                     if (drivePath == pathToPoint) {
-                        console.log('found fitting drive in '+dosdevicesPath);
-                        console.log(`${drivePath}=${pathToPoint}`);
+                        LogMain('found fitting drive in '+dosdevicesPath);
+                        LogMain(`${drivePath}=${pathToPoint}`);
                         return {success: true, letter: driveString.groups.driveLetter};
                     } else {
                         letters = letters.replace(driveString.groups.driveLetter, '');
                     }
                 }
             }
-            console.log('letters left: '+letters);
+            LogMain('letters left: '+letters);
             if (letters.length) {
-                console.log('executing ln: '+`ln -sv "${pathToPoint}" "${letters[0]}:"`);
+                LogMain('executing ln: '+`ln -sv "${pathToPoint}" "${letters[0]}:"`);
                 const { stdout: lnResult, stderr } = await TryExecAsync(`ln -sv "${pathToPoint}" "${dosdevicesPath}/${letters[0]}:"`);
                 if (lnResult && lnResult.includes(pathToPoint)) {
-                    console.log('created new drive: '+lnResult);
+                    LogMain('created new drive: '+lnResult);
                     return {success: true, letter: letters[0]};
                 } else {
-                    console.log('error creating new drive: '+stderr);
+                    LogMain('error creating new drive: '+stderr);
                 }
             }
         }
     } else {
-        console.log('checkExists returned false for '+dosdevicesPath);
+        LogMain('checkExists returned false for '+dosdevicesPath);
     }
     return {success: false};
 }
@@ -815,7 +831,7 @@ async function createTray(games: GameName[], customGames: CustomGameCategory) {
         appIcon.setContextMenu(contextMenu);
 
     } catch (e) {
-        console.log(e);
+        LogMain(e);
     }
 }
 function hideTray() {
@@ -857,7 +873,7 @@ async function createWindow() {
         icon: path.resolve(__public, 'favicon-48x48.png'),
     });
     mainWindow.on('minimize', (event: Electron.Event) => {
-        // console.log('window minmized');
+        LogMain('window minmized');
         sendToRenderer('minimized');
     });
     mainWindow.menuBarVisible = false;

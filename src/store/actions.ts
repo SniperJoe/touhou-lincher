@@ -308,7 +308,7 @@ export const actions: ActionTree<State, State> & Actions = {
     async [ActionTypes.UPSERT_TRAY_CONTEXT_MENU]({ state }: AugmentedActionContext) {
         const configuredGames: GameName[] = gameNames.filter(gn => isGameConfigured(gn, state.gamesSettings[gn], state.nekoProjectPathValid, state.thcrapFound));
         await invokeInMain('set-tray-menu', configuredGames, JSON.stringify(state.customGames));
-        // console.log('creating tray: ', configuredGames, state.customGames);
+        invokeInMain('log', 'creating tray: ', configuredGames.join(', '), JSON.stringify(state.customGames));
     },
     async [ActionTypes.SET_LANG]({ commit, dispatch, state }: AugmentedActionContext, payload: SupportedLang) {
         commit(MutationTypes.SET_LANG, payload);

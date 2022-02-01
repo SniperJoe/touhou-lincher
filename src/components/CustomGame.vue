@@ -118,7 +118,7 @@ const iconWidth: ComputedRef<Record<CustomGamesViewType, string>> = computed(() 
 
 async function loadImg() {
     img.value = await invokeInMain('load-img-from-exe', props.game.path);
-    // console.log('got img: ' + img.value);
+    invokeInMain('log', 'got img: ' + img.value);
 }
 watch(() => props.game.path, loadImg);
 const prefixes = computed(() => store.getters.namedPaths('winePrefix').concat({ id: -1, name: 'Default', path: '' }));

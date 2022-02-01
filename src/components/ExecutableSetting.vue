@@ -60,7 +60,7 @@ const path = computed({
         return isExecutable(props.type) ? store.getters.gameSettings(props.gameName).executables[props.type].path : store.getters.gameSettings(props.gameName).hdiPath;
     },
     set: (val: string) => {
-        console.log('Setting path of ' + title.value + ': ' + val);
+        invokeInMain('log', 'Setting path of ' + title.value + ': ' + val);
         const gameSettings = store.getters.gameSettings(props.gameName);
         if (isExecutable(props.type)) {
             gameSettings.executables[props.type].path = val;

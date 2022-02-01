@@ -147,13 +147,13 @@ async function loadAll() {
     await loadRepositories();
     const profileDataString : string = await invokeInMain('try-load-local-thcrap-profile', store.getters.thcrapPath, props.profileName);
     if (profileDataString) {
-        // console.log(`local profile "${props.profileName}" loaded`);
+        invokeInMain('log', `local profile "${props.profileName}" loaded`);
         profileData = JSON.parse(profileDataString);
-        // console.log(this.profileData);
+        invokeInMain('log', profileData);
         selectedPatches.value.splice(0, selectedPatches.value.length);
         await loadPatchesByPaths(profileData.patches.map(p => p.archive).filter(p => !!p));
     } else {
-        // console.log(`local profile "${props.profileName}" is not loaded`);
+        invokeInMain('log', `local profile "${props.profileName}" is not loaded`);
     }
     loading.value = false;
 }
@@ -260,7 +260,7 @@ async function loadLocalRepositories() {
     const localRepoStrings : string[] = await invokeInMain('load-local-thcrap-repositories', store.getters.thcrapPath);
     if (localRepoStrings) {
         const repos : ThcrapRepository[] = localRepoStrings.map(s => JSON.parse(s));
-        // console.log(repos);
+        invokeInMain('log', repos);
         for (const repo of repos) {
             if (!repositories.value.some(r => r.id === repo.id)) {
                 repositories.value.push(repo);

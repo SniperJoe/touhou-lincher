@@ -7,15 +7,15 @@ import { runCustomGame, runGame, runRandomGame, findGamePath } from './utils';
 export function addRendererIpcListeners(store: Store): void {
     onIpcMessage('get-replays-path', (_, url: string) => getReplaysPath(url, store));
     onIpcMessage('minimized', () => {
-        // console.log('minimized received');
+        invokeInMain('log', 'minimized received');
         if (store.getters.minimizeToTray) {
             store.dispatch(ActionTypes.UPSERT_TRAY_CONTEXT_MENU);
             invokeInMain('hide-from-taskbar');
-            // console.log('sending hide-from-taskbar');
+            invokeInMain('log', 'sending hide-from-taskbar');
         }
     });
     onIpcMessage('open', () => {
-        // console.log('open received');
+        invokeInMain('log', 'open received');
         if (store.getters.minimizeToTray) {
             invokeInMain('show-in-taskbar');
             if (!store.getters.showTrayIcon) {

@@ -40,7 +40,8 @@ export type MainProcessFunctions = {
     'get-thcrap-config': (...args: [string]) => ThcrapConfig | null,
     'get-settings': (...args: []) => string,
     'set-lang': (...args: [SupportedLang]) => void,
-    'open-link': (...args: [string]) => void
+    'open-link': (...args: [string]) => void,
+    'log': (...args: any[]) => void
 }
 export type MainProcessHandler<C extends keyof MainProcessFunctions> = (event: Electron.IpcMainInvokeEvent, ...args: Parameters<MainProcessFunctions[C]>) => Promise<ReturnType<MainProcessFunctions[C]>>;
 export type MainProcessHandlers = {[K in keyof MainProcessFunctions]: MainProcessHandler<K>};
