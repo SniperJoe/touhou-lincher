@@ -5,7 +5,7 @@ import { createProtocol } from 'vue-cli-plugin-electron-builder/lib';
 import { promises as fs, existsSync, createWriteStream } from 'fs';
 import path from 'path';
 import { categoryNames, CustomExeLaunchProfile, customExeLaunchProfiles, CustomGameCategory, GameLaunchProfile, gameLaunchProfiles, GameName, gameNames, GameSettings, LoadRemoteThcrapPatchParams, NamedPath, RunCustomGameParams, RunExeParams, RunGameParams, RunPC98GameParams, RunWindowsGameParams, SupportedLang, ThcrapConfig, ThcrapPatchResponse, ThcrapRepository } from './data-types';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import axios from 'axios';
 import { MainProcessFunctions, MainProcessHandlers } from './main-process-functions';
@@ -93,11 +93,38 @@ async function getWineVersion(winePath: string) {
 async function TryExecAsync(command: string): Promise<{ stdout: string; stderr: string; }> {
     const execAsync = promisify(exec);
     try {
-        return await execAsync(command);
+        LogMain('executing: ', command);
+        const execResult = await execAsync(command, {maxBuffer: 1024*1024});
+        return execResult;
     }
     catch(e) {
-        return { stdout: '', stderr: (e as {toString: () => string}).toString()};
+        const stderr = (e as {toString: () => string}).toString();
+        LogMain('exec error: ', stderr);
+        return { stdout: '', stderr};
     }
+}
+function TrySpawnAsync(command: string, cwd: string, args: string[], env: Record<string, string>): Promise<{ stdout: string; stderr: string; code: number | null}> {
+    let stdout = '';
+    let stderr = '';
+    LogMain('executing ', command, ', args: ', args.join(' '), ', cwd: ', cwd, ', env:', env);
+    const child = spawn(command, args, {cwd, env: {...process.env, ...env}});
+    child.stdout.on('data', (chunk) => {
+        if (typeof chunk === 'string') {
+            stdout += chunk;
+            LogMain(chunk);
+        }
+    });
+    child.stderr.on('data', (chunk) => {
+        if (typeof chunk === 'string') {
+            stderr += chunk;
+            LogMain(chunk);
+        }
+    });
+    return new Promise<{ stdout: string; stderr: string; code: number | null}>((resolve) => {
+        child.on('close', code => {
+            resolve({stderr, stdout, code});
+        });
+    });
 }
 function addIpcListeners() {
     const ipcListeners: MainProcessHandlers = {
@@ -154,16 +181,16 @@ function addIpcListeners() {
         },
         'run-custom-game':  async (_, paramsStr: string) => {
             const params: RunCustomGameParams = JSON.parse(paramsStr);
-            const {wineCommand, winePrefixCommand} = getWineParams(params);
+            const {wineCommand, envVariables} = getWineParams(params);
             const workingDir = path.dirname(params.path);
-            const wineArgs = path.basename(params.path);
-            const localeArgs = params.withAppLocale ? 'LANG=ja_JP.UTF-8 ' : '';
-            const command = `cd "${workingDir}" && ${winePrefixCommand}${localeArgs}${wineCommand} ${wineArgs}`;
+            const wineArgs = [path.basename(params.path)];
+            if (params.withAppLocale) {
+                envVariables.LANG = 'ja_JP.UTF-8';
+            }
             for (const cmd of params.commandsBefore.filter(c => !!c)) {
                 await TryExecAsync(cmd);
             }
-            LogMain(command);
-            await TryExecAsync(command);
+            await TrySpawnAsync(wineCommand, workingDir, wineArgs, envVariables);
             for (const cmd of params.commandsAfter.filter(c => !!c)) {
                 await TryExecAsync(cmd);
             }
@@ -432,7 +459,6 @@ function isMainProcessFunctionName(channel: string, ipcListeners: MainProcessHan
 async function loadDataUrlImgFromExe(exePath: string) {
     const output = await TryExecAsync(`wrestool -x -t 14 "${exePath}" | base64`);
     LogMain('exe img path: ' + path);
-    LogMain('exe img result: ', output);
     if (output.stdout) {
         return `data:image/x-icon;base64,${output.stdout}`;
     }
@@ -548,24 +574,24 @@ async function getHomeFolder(): Promise<string> {
     }
     return '';
 }
-function getWineParams({gameSettings, defaultWinePrefix, defaultWineExec, winePrefixes, wineExecs}: RunExeParams) : {winePrefixCommand: string, wineCommand: string} {
+function getWineParams({gameSettings, defaultWinePrefix, defaultWineExec, winePrefixes, wineExecs}: RunExeParams) : {envVariables: Record<string, string>, wineCommand: string} {
     let winePrefixId = gameSettings.wineSettings.winePrefix;
     if (winePrefixId < 0) {
         winePrefixId = defaultWinePrefix;
     }
     const configuredWinePrefix = winePrefixId >= 0 ? winePrefixes.find(wp => wp.id == winePrefixId) : undefined;
-    const winePrefixCommand = configuredWinePrefix ? `WINEPREFIX="${configuredWinePrefix.path}" ` : '';
+    const wineExecEnv: Record<string, string> = configuredWinePrefix ? {WINEPREFIX: configuredWinePrefix.path} : {};
     let wineExecId = gameSettings.wineSettings.wineExec;
     if (wineExecId < 0) {
         wineExecId = defaultWineExec;
     }
     const configuredWineExec = wineExecId >= 0 ? wineExecs.find(wp => wp.id == wineExecId) : undefined;
-    const wineCommand = configuredWineExec ? `"${configuredWineExec.path}"` : 'wine';
-    return {wineCommand, winePrefixCommand};
+    const wineCommand = configuredWineExec ? configuredWineExec.path : 'wine';
+    return {wineCommand, envVariables: wineExecEnv};
 }
 async function RunGame(runGameParams: RunWindowsGameParams) {
     const {gameSettings, defaultWinePrefix, defaultWineExec, winePrefixes, wineExecs, thcrapPath, thcrapFound, isCustomExe} = runGameParams;
-    const {wineCommand, winePrefixCommand} = getWineParams(runGameParams);
+    const {wineCommand, envVariables} = getWineParams(runGameParams);
     const launchProfile = findLaunchProfile(gameSettings, thcrapFound, isCustomExe);
     if(!launchProfile) {
         return;
@@ -573,16 +599,18 @@ async function RunGame(runGameParams: RunWindowsGameParams) {
     if (launchProfile == 'thcrap') {
         const workingDir = path.dirname(thcrapPath);
         const executableThcrapProfile = isCustomExe ? gameSettings.thcrapCustomExeProfile : gameSettings.thcrapGameProfile;
-        const wineArgs = `./bin/thcrap_loader.exe "${gameSettings.thcrapProfile}" ${executableThcrapProfile}`;
-        const localeArgs = gameSettings.thcrapWithAppLocale ? 'LANG=ja_JP.UTF-8 ' : '';
-        const command = `cd "${workingDir}" && ${winePrefixCommand}${localeArgs}${wineCommand} ${wineArgs}`;
-        await runWithCommandsBeforeAndAfter(command, runGameParams.commandsBefore, runGameParams.commandsAfter, runGameParams.autoClose);
+        const wineArgs = [`./bin/thcrap_loader.exe`, gameSettings.thcrapProfile, executableThcrapProfile];
+        if (gameSettings.thcrapWithAppLocale) {
+            envVariables.LANG = 'ja_JP.UTF-8';
+        }
+        await runWithCommandsBeforeAndAfter(wineCommand, workingDir, wineArgs, envVariables, runGameParams.commandsBefore, runGameParams.commandsAfter, runGameParams.autoClose);
     } else {
         const workingDir = path.dirname(gameSettings.executables[launchProfile].path);
-        const wineArgs = path.basename(gameSettings.executables[launchProfile].path);
-        const localeArgs = gameSettings.executables[launchProfile].withAppLocale ? 'LANG=ja_JP.UTF-8 ' : '';
-        const command = `cd "${workingDir}" && ${winePrefixCommand}${localeArgs}${wineCommand} ${wineArgs}`;
-        await runWithCommandsBeforeAndAfter(command, runGameParams.commandsBefore, runGameParams.commandsAfter, runGameParams.autoClose);
+        const wineArgs = [path.basename(gameSettings.executables[launchProfile].path)];
+        if (gameSettings.executables[launchProfile].withAppLocale) {
+            envVariables.LANG = 'ja_JP.UTF-8';
+        }
+        await runWithCommandsBeforeAndAfter(wineCommand, workingDir, wineArgs, envVariables, runGameParams.commandsBefore, runGameParams.commandsAfter, runGameParams.autoClose);
     }
 }
 function findLaunchProfile(gameSettings: GameSettings, thcrapFound: boolean, isCustomExe: boolean) : GameLaunchProfile | CustomExeLaunchProfile | null {
@@ -616,8 +644,8 @@ async function RunPC98Game(runGameParams: RunPC98GameParams) : Promise<string> {
         const nekoDirectory = path.dirname(nekoProjectPath)
         let nekoConfigPath = path.resolve(nekoDirectory, "np21nt.ini");
         if (checkExists(nekoConfigPath)) {
-             const {wineCommand, winePrefixCommand} = getWineParams(runGameParams);
-            const driveResult = await createWineDrive(path.dirname(gameSettings.hdiPath), winePrefixCommand);
+            const {wineCommand, envVariables} = getWineParams(runGameParams);
+            const driveResult = await createWineDrive(path.dirname(gameSettings.hdiPath), envVariables.WINEPREFIX);
             if (!driveResult.success) {
                 return 'winePrefix';
             }
@@ -627,8 +655,7 @@ async function RunPC98Game(runGameParams: RunPC98GameParams) : Promise<string> {
             if (writeHdiPathToNekoConfigResult) {
                 return writeHdiPathToNekoConfigResult;
             }
-            const command = `cd "${nekoDirectory}" && ${winePrefixCommand}${wineCommand} ${path.basename(nekoProjectPath)}`;
-            await runWithCommandsBeforeAndAfter(command, runGameParams.commandsBefore, runGameParams.commandsAfter, runGameParams.autoClose);
+            await runWithCommandsBeforeAndAfter(wineCommand, nekoDirectory, [path.basename(nekoProjectPath)], envVariables, runGameParams.commandsBefore, runGameParams.commandsAfter, runGameParams.autoClose);
             return '';
         } else {
             const homeFolder = await getHomeFolder();
@@ -639,15 +666,14 @@ async function RunPC98Game(runGameParams: RunPC98GameParams) : Promise<string> {
                 if (writeHdiPathToNekoConfigResult) {
                     return writeHdiPathToNekoConfigResult;
                 }
-                const command = `cd "${nekoDirectory}" && ./xnp21kai`;
-                await runWithCommandsBeforeAndAfter(command, runGameParams.commandsBefore, runGameParams.commandsAfter, runGameParams.autoClose);
+                await runWithCommandsBeforeAndAfter(`./xnp21kai`, nekoDirectory, [], {}, runGameParams.commandsBefore, runGameParams.commandsAfter, runGameParams.autoClose);
                 return '';
             }
         }
     }
     return 'nekoPath';
 }
-async function runWithCommandsBeforeAndAfter(command: string, commandsBefore: string[], commandsAfter: string[], autoClose: boolean) {
+async function runWithCommandsBeforeAndAfter(command: string, cwd: string, args: string[], env: Record<string, string>, commandsBefore: string[], commandsAfter: string[], autoClose: boolean) {
     for (const cmd of commandsBefore.filter(c => !!c)) {
         await TryExecAsync(cmd);
     }
@@ -656,7 +682,7 @@ async function runWithCommandsBeforeAndAfter(command: string, commandsBefore: st
         if (autoClose) { 
             mainWindow.minimize();
         }
-        await TryExecAsync(command);
+        await TrySpawnAsync(command, cwd, args, env);
         for (const cmd of commandsAfter.filter(c => !!c)) {
             await TryExecAsync(cmd);
         }
@@ -665,10 +691,10 @@ async function runWithCommandsBeforeAndAfter(command: string, commandsBefore: st
         }
     } else {
         if (autoClose) {
-            TryExecAsync(command);
+            TrySpawnAsync(command, cwd, args, env);
             mainWindow.close();
         } else {
-            await TryExecAsync(command);
+            await TrySpawnAsync(command, cwd, args, env);
         }
     }
 }
@@ -692,8 +718,8 @@ async function writeHdiPathToNekoConfig(nekoConfigPath: string, gameHdiPath: str
     }
     return 'configIncorrect';
 }
-async function createWineDrive(pathToPoint: string, prefixCommand: string): Promise<{ success: true; letter: string; } | { success: false; }> {
-    const prefixPath = tryGetGroup(prefixCommand, /WINEPREFIX="(?<pfx>.+?)"? $/, 'pfx') || await getDefaultWinePrefix();
+async function createWineDrive(pathToPoint: string, prefixPath?: string): Promise<{ success: true; letter: string; } | { success: false; }> {
+    prefixPath = prefixPath || await getDefaultWinePrefix();
     LogMain('pathToPoint is '+pathToPoint);
     pathToPoint = pathToPoint.replace(/\/$/, '');
     const dosdevicesPath = path.resolve(prefixPath, 'dosdevices');
